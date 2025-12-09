@@ -1,0 +1,269 @@
+/* Global Form Optimization for Mobile - Simpro-style */
+
+/* Ensure all forms are responsive */
+.fs-content form,
+.fs-content .form-container,
+.fs-content .settings-form {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Form inputs auto-resize - Better sizing */
+.fs-content input[type="text"],
+.fs-content input[type="email"],
+.fs-content input[type="number"],
+.fs-content input[type="date"],
+.fs-content input[type="time"],
+.fs-content input[type="tel"],
+.fs-content input[type="url"],
+.fs-content input[type="password"],
+.fs-content textarea,
+.fs-content select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 16px; /* Prevents zoom on iOS */
+  padding: 14px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s;
+  background: white;
+  min-height: 48px; /* Better touch target */
+}
+
+.fs-content textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.fs-content input:focus,
+.fs-content textarea:focus,
+.fs-content select:focus {
+  outline: none;
+  border-color: #0078d4;
+  box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+}
+
+/* Form groups - Better spacing */
+.fs-content .form-group {
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.fs-content .form-group label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Form sections */
+.fs-content .form-section,
+.fs-content .settings-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 640px) {
+  .fs-content .form-section,
+  .fs-content .settings-section {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+}
+
+/* Form rows/grids - responsive */
+.fs-content .form-row,
+.fs-content .form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+/* Responsive form grids */
+@media (min-width: 640px) {
+  .fs-content .form-row,
+  .fs-content .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .fs-content .form-row,
+  .fs-content .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .fs-content .form-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Modal forms - full width on mobile */
+.fs-content .modal-content form,
+.fs-content .modal-body form {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Buttons - responsive with better sizing */
+.fs-content .btn-primary,
+.fs-content .btn-secondary,
+.fs-content button[type="submit"],
+.fs-content button[type="button"]:not(.fs-header-menu-btn):not(.fs-menu-toggle) {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fs-content .btn-primary {
+  background: #0078d4;
+  color: white;
+  border: none;
+}
+
+.fs-content .btn-primary:hover:not(:disabled) {
+  background: #0066b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 120, 212, 0.2);
+}
+
+.fs-content .btn-secondary {
+  background: white;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+}
+
+.fs-content .btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+@media (min-width: 640px) {
+  .fs-content .btn-primary,
+  .fs-content .btn-secondary,
+  .fs-content button[type="submit"] {
+    width: auto;
+    min-width: 140px;
+  }
+}
+
+/* Form actions - stack on mobile */
+.fs-content .form-actions,
+.fs-content .modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .fs-content .form-actions,
+  .fs-content .modal-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+/* Tables - responsive */
+.fs-content table {
+  width: 100%;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 768px) {
+  .fs-content table {
+    display: table;
+  }
+}
+
+/* Cards - responsive */
+.fs-content .card,
+.fs-content .stat-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure modals are mobile-friendly with better sizing */
+.fs-content .modal,
+.fs-content .modal-content,
+.fs-content .modal-body {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.fs-content .modal form {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .fs-content .modal,
+  .fs-content .modal-content,
+  .fs-content .modal-body {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .fs-content .modal,
+  .fs-content .modal-content {
+    max-width: 800px;
+  }
+}
+
+/* Touch-friendly targets */
+.fs-content button,
+.fs-content a,
+.fs-content .clickable {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Prevent text size adjustment on iOS */
+.fs-content input,
+.fs-content textarea,
+.fs-content select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Better select styling */
+.fs-content select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23374151' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 40px;
+}
+

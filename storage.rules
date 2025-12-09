@@ -1,0 +1,66 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Autoclave folder - allow authenticated users to read ALL files and folders recursively
+    // Match pattern: autoclave/{any path with any number of segments}
+    match /autoclave/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only service account can write (bypasses rules via Admin SDK)
+    }
+    
+    // Also explicitly match autoclave root files (single level)
+    match /autoclave/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    // Products folder - public read access for product images
+    match /products/{allPaths=**} {
+      allow read: if true; // Public read access for product images
+      allow write: if false; // Only admins/service account can write
+    }
+    
+    // Products root files
+    match /products/{fileName} {
+      allow read: if true; // Public read access for product images
+      allow write: if false;
+    }
+    
+    // Public assets - anyone can read
+    match /medifocal-public-assets/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /medifocal-public-assets/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Device username folders - allow authenticated users to read
+    // Examples: medifocal/LOG/file.txt, FB22LB2508224/folder/file.txt
+    // This allows any device username as root folder (universal)
+    match /{deviceUsername}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only service account can write (bypasses rules via Admin SDK)
+    }
+    
+    // Device username root files (single level)
+    match /{deviceUsername}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

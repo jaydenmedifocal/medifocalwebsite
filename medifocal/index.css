@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-family-sans: 'Lato', sans-serif;
+  --font-family-display: 'Montserrat', sans-serif;
+  
+  --color-brand-blue: #007ac0;
+  --color-brand-green: #6bb944;
+  --color-brand-gray: #f4f4f4;
+}
+
+/* Custom styles can go here */
+
+/* Custom Scrollbar Styles */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #007ac0;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #005a90;
+}
+
+/* Firefox scrollbar */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #007ac0 #f1f1f1;
+}
+
+/* Hide scrollbar utility for horizontal scrolling */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
