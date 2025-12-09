@@ -108,3 +108,15 @@ public/
 
 push_with_token.sh
 *.zip
+
+# Documentation and temporary files
+BUILD_*.md
+CUSTOM_*.md
+DEPLOYMENT_*.md
+FUNCTIONALITY_*.md
+GITHUB_*.md
+PERFORMANCE_*.md
+PUSH_*.md
+PUSH_*.sh
+*product_images_report*
+*Cingol*
