@@ -109,7 +109,7 @@ public/
 push_with_token.sh
 *.zip
 
-# Documentation and temporary files
+# Documentation and temporary files (cleanup)
 BUILD_*.md
 CUSTOM_*.md
 DEPLOYMENT_*.md
@@ -120,3 +120,10 @@ PUSH_*.md
 PUSH_*.sh
 *product_images_report*
 *Cingol*
+*operation manual*
+
+# Temporary folders
+blog-factory/
+firebase-studio-import/
+temp_medifocal_extract/
+*autoclave*/
