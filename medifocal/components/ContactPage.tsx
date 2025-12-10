@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View } from '../App';
 import { sendContactEmail } from '../services/contact';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface ContactPageProps {
@@ -66,10 +65,6 @@ const ContactPage: React.FC<ContactPageProps> = ({ setCurrentView }) => {
                 description="Get in touch with Medifocal, Australia's leading dental equipment supplier. Contact us for product inquiries, support, or sales assistance. Expert team ready to help."
                 url={`https://medifocal.com${contactUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Contact Us' }
-            ]} setCurrentView={setCurrentView} />
             <div className="container mx-auto px-4 py-8">
 
                 {/* Hero Banner */}

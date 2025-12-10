@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import EquipmentServiceRequestModal from './EquipmentServiceRequestModal';
 import { viewToUrl } from '../utils/routing';
 
@@ -69,14 +68,6 @@ const AutoclaveServicePage: React.FC<AutoclaveServicePageProps> = ({ setCurrentV
                 description="Professional autoclave servicing, repair, validation, and maintenance for all major brands. Certified technicians, compliance testing, and comprehensive warranties. Serving Australian dental practices for 60+ years."
                 keywords="autoclave service, autoclave repair, autoclave validation, autoclave maintenance, autoclave servicing, autoclave testing, Bowie-Dick test, autoclave compliance"
                 url={`https://medifocal.com${pageUrl}`}
-            />
-            <Breadcrumbs
-                items={[
-                    { label: 'Home', view: { page: 'home' } },
-                    { label: 'Equipment Services', view: { page: 'equipmentServices' } },
-                    { label: 'Autoclave Service' }
-                ]}
-                setCurrentView={setCurrentView}
             />
 
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -268,4 +259,6 @@ const AutoclaveServicePage: React.FC<AutoclaveServicePageProps> = ({ setCurrentV
 };
 
 export default AutoclaveServicePage;
+
+
 

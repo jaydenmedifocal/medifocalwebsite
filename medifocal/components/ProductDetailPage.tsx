@@ -5,10 +5,11 @@ import { View } from '../App';
 import ProductCard from './ProductCard';
 import { useCart } from '../contexts/CartContext';
 import ProductSchema from './ProductSchema';
-import Breadcrumbs from './Breadcrumbs';
 import SEOHead from './SEOHead';
 import { viewToUrl } from '../utils/routing';
 import { getProductSEOTitle, getProductSEODescription } from '../utils/categorySEO';
+import ProductReviews from './ProductReviews';
+import { getReviewSummary } from '../services/reviews';
 
 // --- Skeleton Components ---
 const ProductDetailSkeleton = () => (
@@ -54,7 +55,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
     const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
     const [activeImage, setActiveImage] = useState('');
     const [activeTab, setActiveTab] = useState('details');
-    const [isAdded, setIsAdded] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [selectedVariant, setSelectedVariant] = useState<any>(null);
     const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
@@ -63,6 +63,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [touchStart, setTouchStart] = useState(0);
     const [touchEnd, setTouchEnd] = useState(0);
+    const [btnState, setBtnState] = useState<'idle' | 'loading' | 'success'>('idle');
+    const [selectedBundleItems, setSelectedBundleItems] = useState<Set<string>>(new Set());
+    const [showSticky, setShowSticky] = useState(false);
+    const [expandedFAQ, setExpandedFAQ] = useState<number | null>(0);
+    const [showAllImages, setShowAllImages] = useState(false);
+    const [reviewSummary, setReviewSummary] = useState<{ averageRating: number; totalReviews: number } | null>(null);
     const { addItem } = useCart();
     
     const placeholderSvg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCBmaWxsPSIjZjNmNGY2IiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIvPjx0ZXh0IGZpbGw9IiM5Y2EzYWYiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4IiBkeT0iMTAuNSIgZm9udC13ZWlnaHQ9ImJvbGQiIHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
@@ -123,6 +129,28 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                             .filter((p: any) => p.category === productData.category && p.itemNumber !== productData.itemNumber)
                             .sort(() => 0.5 - Math.random()).slice(0, 5);
                         setRelatedProducts(related);
+                        
+                        // Auto-select items under $200 (handpieces or small items)
+                        const autoSelectItems = related
+                            .filter((p: any) => {
+                                const price = p.price || 0;
+                                const name = (p.name || '').toLowerCase();
+                                const category = (p.category || '').toLowerCase();
+                                return price < 200 && (
+                                    name.includes('handpiece') || 
+                                    name.includes('motor') ||
+                                    category.includes('handpiece') ||
+                                    price < 100 // Small items under $100
+                                );
+                            })
+                            .slice(0, 2); // Auto-select up to 2 items
+                        
+                        if (autoSelectItems.length > 0) {
+                            const autoSelectIds = new Set(
+                                autoSelectItems.map((p: any) => p.itemNumber || p.id)
+                            );
+                            setSelectedBundleItems(autoSelectIds);
+                        }
                     }).catch(err => {
                         console.error('Error loading related products:', err);
                     });
@@ -177,6 +205,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
 
     const handleAddToCart = () => {
         if (!product) return;
+        setBtnState('loading');
+        
         const itemToAdd = selectedVariant 
             ? { 
                 ...product, 
@@ -189,10 +219,73 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                 description: selectedVariant.description || product.description || product.details
             } 
             : product;
+        
+        // Add main product
         addItem(itemToAdd, quantity);
-        setIsAdded(true);
-        setTimeout(() => setIsAdded(false), 2500);
+        
+        // Add bundle items if selected (mark as add-on)
+        relatedProducts.slice(0, 3).forEach((relatedProduct: any) => {
+            if (selectedBundleItems.has(relatedProduct.itemNumber || relatedProduct.id)) {
+                const price = relatedProduct.price || 0;
+                const isAddOn = price < 200 && (
+                    (relatedProduct.name || '').toLowerCase().includes('handpiece') || 
+                    (relatedProduct.name || '').toLowerCase().includes('motor') ||
+                    price < 100
+                );
+                // Add item with add-on metadata
+                addItem({
+                    ...relatedProduct,
+                    isAddOn: isAddOn,
+                    addOnLabel: isAddOn ? 'Bundle Add-on' : undefined
+                }, 1);
+            }
+        });
+        
+        setTimeout(() => {
+            setBtnState('success');
+            setTimeout(() => setBtnState('idle'), 2000);
+        }, 600);
     };
+
+    // Scroll listener for sticky bar
+    useEffect(() => {
+        const handleScroll = () => {
+            const mainBtn = document.getElementById('main-cta');
+            if (mainBtn) {
+                const rect = mainBtn.getBoundingClientRect();
+                setShowSticky(rect.bottom < 0);
+            }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const toggleBundleItem = (itemId: string) => {
+        setSelectedBundleItems(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(itemId)) {
+                newSet.delete(itemId);
+            } else {
+                newSet.add(itemId);
+            }
+            return newSet;
+        });
+    };
+
+    // Calculate bundle savings
+    const bundleItems = relatedProducts.slice(0, 3).filter((p: any) => selectedBundleItems.has(p.itemNumber || p.id));
+    const bundleTotal = useMemo(() => {
+        const mainPrice = (selectedVariant?.price || product?.price || 0) * quantity;
+        const bundlePrice = bundleItems.reduce((sum: number, item: any) => sum + (item.price || 0), 0);
+        return mainPrice + bundlePrice;
+    }, [product, selectedVariant, quantity, bundleItems]);
+    
+    const bundleSavings = useMemo(() => {
+        if (bundleItems.length >= 2) {
+            return bundleTotal * 0.1; // 10% discount on bundles
+        }
+        return 0;
+    }, [bundleTotal, bundleItems.length]);
 
     // Collect all images from product and selected variant
     // For dental chairs, ensure the first image is the actual chair image
@@ -294,6 +387,19 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
             }
         }
     }, [allImages, activeImage, product]);
+
+    // Load review summary for product schema - MUST be before early returns
+    useEffect(() => {
+        const loadReviewSummary = async () => {
+            try {
+                const summary = await getReviewSummary(itemNumber);
+                setReviewSummary(summary);
+            } catch (error) {
+                console.error('Error loading review summary:', error);
+            }
+        };
+        loadReviewSummary();
+    }, [itemNumber]);
 
     // Filter variants based on search term - MUST be before early returns
     const filteredVariants = useMemo(() => {
@@ -816,27 +922,47 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
         product.manufacturer
     );
     
-    // Enhanced SEO description
+    // Enhanced SEO description - Ensure uniqueness with item number
     let seoDescription = '';
     if (product.description) {
-        seoDescription = product.description.substring(0, 150);
-        if (product.description.length > 150) seoDescription += '...';
+        // Use product description but enhance with unique identifiers
+        const baseDesc = product.description.substring(0, 120);
+        seoDescription = `${baseDesc}${product.itemNumber ? ` Item #${product.itemNumber}.` : ''} ${product.manufacturer ? `By ${product.manufacturer}.` : ''} Fast shipping Australia-wide.`;
+        if (seoDescription.length > 160) {
+            seoDescription = seoDescription.substring(0, 157) + '...';
+        }
     } else {
         seoDescription = getProductSEODescription(
             product.name,
             product.category || product.parentCategory,
             product.manufacturer,
-            product.displayPrice
+            product.displayPrice,
+            undefined, // features
+            product.itemNumber // Add item number for uniqueness
         );
     }
     
-    // For dental chairs, enhance description further
+    // For dental chairs, enhance description further with unique details
     if (isDentalChair) {
-        seoDescription = `${product.name}${product.manufacturer ? ` by ${product.manufacturer}` : ''} - Premium dental chair Australia. ${product.displayPrice ? `Price: ${product.displayPrice}.` : ''} Remote control treatment unit for Australian dental practices. Fast shipping, expert installation, 60+ years experience.`;
+        const chairDesc = `${product.name}${product.manufacturer ? ` by ${product.manufacturer}` : ''} - Premium dental chair for Australian practices. ${product.itemNumber ? `Item #${product.itemNumber}.` : ''} ${product.displayPrice ? `Price: ${product.displayPrice}.` : ''} Remote control treatment unit. Fast shipping, expert installation, 60+ years experience.`;
+        seoDescription = chairDesc.length > 160 ? chairDesc.substring(0, 157) + '...' : chairDesc;
     }
+
+    const faqs = [
+        { q: "What is the warranty on this product?", a: "We offer a comprehensive 2-year warranty on all manufacturing defects. Contact us for warranty claims." },
+        { q: "How fast is the shipping?", a: "Free express shipping (2-3 business days) is included with all orders over $500. Standard shipping is available for smaller orders." },
+        { q: "Do you offer installation services?", a: "Yes! We provide professional installation services for dental equipment. Contact us to schedule an installation appointment." },
+        { q: "Can I return this product if I'm not satisfied?", a: "Yes, we offer a 30-day return policy. Products must be in original condition. Contact us to initiate a return." }
+    ];
 
     return (
         <div className="bg-white">
+            {/* Announcement Bar */}
+            <div className="bg-brand-blue text-white text-xs md:text-sm font-medium py-2 px-4 text-center">
+                <span className="inline-block animate-pulse mr-2">🔥</span>
+                Bundle Deal: Save 10% when you add 2+ related products to your cart!
+            </div>
+
             <SEOHead
                 title={seoTitle}
                 description={seoDescription}
@@ -853,14 +979,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                 }}
             />
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
-                <Breadcrumbs items={[
-                    { label: 'Home', view: { page: 'home' } },
-                    { label: product.parentCategory, view: { page: 'categoryLanding', categoryName: product.parentCategory } },
-                    { label: product.category, view: { page: 'productList', categoryName: product.category, parentCategory: product.parentCategory } },
-                    { label: product.name }
-                ]} setCurrentView={setCurrentView} />
-                
-                <ProductSchema product={product} />
+                <ProductSchema product={{
+                    ...product,
+                    rating: reviewSummary?.averageRating || product.rating,
+                    reviewCount: reviewSummary?.totalReviews || product.reviewCount
+                }} />
 
                 {/* MOBILE LAYOUT - Complete Single Column Stack */}
                 <div className="block lg:hidden space-y-6">
@@ -907,6 +1030,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                             </div>
                                         </>
                                     )}
+                                    {/* Scarcity Badge */}
+                                    <span className="absolute top-4 left-4 bg-white/90 backdrop-blur text-red-600 text-xs font-bold px-3 py-1.5 rounded-full z-10 shadow-sm flex items-center gap-1">
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Low Stock
+                                    </span>
                                 </div>
                             ) : (
                                 <div className="w-full aspect-square flex items-center justify-center bg-gray-100 rounded-lg">
@@ -915,36 +1045,56 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                             )}
                         </div>
 
-                        {/* Mobile: Horizontal Swipeable Thumbnails (3-4 visible) */}
+                        {/* Mobile: Thumbnails (3 + View More) */}
                         {allImages.length > 1 && (
-                            <div className="mt-3">
-                                <div className="flex gap-3 overflow-x-auto pb-3 -mx-2 px-2 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                                    {allImages.map((img, i) => (
-                                        <button 
-                                            key={`${img}-${i}`}
-                                            onClick={() => {
-                                                setActiveImage(img);
-                                                setCurrentImageIndex(i);
-                                            }} 
-                                            className={`flex-shrink-0 w-24 h-24 border-2 rounded-lg p-1.5 bg-white transition-all snap-center ${
-                                                activeImage === img 
-                                                    ? 'border-brand-blue ring-2 ring-brand-blue shadow-md scale-105' 
-                                                    : 'border-gray-200'
-                                            }`}
+                            <div className="mt-6 pt-4">
+                                <div className="flex gap-3 overflow-x-auto pb-3 pt-2 -mx-2 px-2 pl-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                                    {(showAllImages ? allImages : allImages.slice(0, 3)).map((img, i) => {
+                                        const actualIndex = showAllImages ? i : i;
+                                        return (
+                                            <button 
+                                                key={`${img}-${actualIndex}`}
+                                                onClick={() => {
+                                                    setActiveImage(img);
+                                                    setCurrentImageIndex(actualIndex);
+                                                }} 
+                                                className={`relative flex-shrink-0 w-24 h-24 border-2 rounded-lg p-1.5 bg-white transition-all snap-center ${
+                                                    activeImage === img 
+                                                        ? 'border-brand-blue ring-2 ring-brand-blue ring-offset-2 shadow-md scale-105 z-10' 
+                                                        : 'border-gray-200 z-0'
+                                                }`}
+                                            >
+                                                <img 
+                                                    src={getImageUrl(img)} 
+                                                    alt={`${product.name}${product.manufacturer ? ` by ${product.manufacturer}` : ''} - Image ${actualIndex + 1}`}
+                                                    className="w-full h-full object-contain rounded" 
+                                                    onError={() => setImageErrors(prev => new Set(prev).add(img))} 
+                                                    loading="lazy"
+                                                    width="96"
+                                                    height="96"
+                                                />
+                                            </button>
+                                        );
+                                    })}
+                                    {!showAllImages && allImages.length > 3 && (
+                                        <button
+                                            onClick={() => setShowAllImages(true)}
+                                            className="flex-shrink-0 w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-brand-blue transition-all flex flex-col items-center justify-center snap-center"
                                         >
-                                            <img 
-                                                src={getImageUrl(img)} 
-                                                alt={`${product.name}${product.manufacturer ? ` by ${product.manufacturer}` : ''} - Image ${i + 1}`}
-                                                className="w-full h-full object-contain rounded" 
-                                                onError={() => setImageErrors(prev => new Set(prev).add(img))} 
-                                                loading="lazy"
-                                                width="96"
-                                                height="96"
-                                            />
+                                            <svg className="w-6 h-6 text-gray-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            <span className="text-xs font-semibold text-gray-600">View More</span>
+                                            <span className="text-[10px] text-gray-500 mt-0.5">+{allImages.length - 3}</span>
                                         </button>
-                                    ))}
+                                    )}
                                 </div>
-                                <p className="text-xs text-gray-500 text-center mt-2">Swipe to see more • {allImages.length} images</p>
+                                {showAllImages && (
+                                    <p className="text-xs text-gray-500 text-center mt-2">
+                                        Showing all {allImages.length} images • 
+                                        <button onClick={() => setShowAllImages(false)} className="text-brand-blue hover:underline ml-1">Show less</button>
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
@@ -968,7 +1118,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                         {product.variants && product.variants.length > 0 && (
                             <div className="border-t border-b border-gray-200 py-4">
                                 <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider mb-3">Select Option</h3>
-                                <div className="flex gap-3 overflow-x-auto pb-3 -mx-2 px-2 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                                <div className="flex gap-3 overflow-x-auto pb-3 pt-2 -mx-2 px-2 pl-4 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                                     {filteredVariants.map((v: any, index: number) => {
                                         const variantName = getVariantDisplayName(v, index);
                                         const isSelected = selectedVariant && (
@@ -980,8 +1130,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                             <button
                                                 key={v.id || v.sku || v.itemNumber || index}
                                                 onClick={() => setSelectedVariant(v)}
-                                                className={`flex-shrink-0 w-48 p-4 border-2 rounded-xl transition-all snap-center ${
-                                                    isSelected ? 'border-brand-blue bg-brand-blue text-white shadow-lg scale-105' : 'border-gray-200 bg-white'
+                                                className={`relative flex-shrink-0 w-48 p-4 border-2 rounded-xl transition-all snap-center ${
+                                                    isSelected ? 'border-brand-blue bg-brand-blue text-white ring-2 ring-brand-blue ring-offset-2 shadow-lg scale-105 z-10' : 'border-gray-200 bg-white z-0'
                                                 }`}
                                             >
                                                 <h4 className={`font-bold text-sm mb-2 ${isSelected ? 'text-white' : 'text-gray-900'}`}>{variantName}</h4>
@@ -1012,13 +1162,44 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                 </div>
                             </div>
                             <button 
+                                id="main-cta"
                                 onClick={handleAddToCart} 
-                                disabled={isAdded} 
-                                className={`w-full font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg text-base ${
-                                    isAdded ? 'bg-green-600 text-white' : 'bg-brand-blue text-white hover:bg-brand-blue-700'
+                                disabled={btnState === 'loading' || btnState === 'success'}
+                                className={`w-full font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg text-base relative overflow-hidden ${
+                                    btnState === 'success' 
+                                        ? 'bg-green-600 text-white' 
+                                        : btnState === 'loading'
+                                        ? 'bg-brand-blue-600 text-white cursor-wait'
+                                        : 'bg-brand-blue text-white hover:bg-brand-blue-700 active:scale-95'
                                 }`}
                             >
-                                {isAdded ? <><AddedIcon /> Added!</> : 'Add to Cart'}
+                                {btnState === 'idle' && (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        <span>Add to Cart</span>
+                                        {bundleSavings > 0 && (
+                                            <span className="ml-2 text-xs opacity-80 border-l border-white/20 pl-2">
+                                                Save ${bundleSavings.toFixed(0)}
+                                            </span>
+                                        )}
+                                    </>
+                                )}
+                                {btnState === 'loading' && (
+                                    <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                )}
+                                {btnState === 'success' && (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>Added to Cart!</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -1054,6 +1235,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                                 </div>
                                             </>
                                         )}
+                                        {/* Scarcity Badge */}
+                                        <span className="absolute top-4 left-4 bg-white/90 backdrop-blur text-red-600 text-xs font-bold px-3 py-1.5 rounded-full z-10 shadow-sm flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Low Stock
+                                        </span>
                                     </div>
                                 ) : (
                                     <div className="w-full aspect-[4/3] flex items-center justify-center bg-gray-100 rounded-lg">
@@ -1062,26 +1250,52 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                 )}
                             </div>
                             {allImages.length > 1 && (
-                                <div className="flex flex-wrap gap-3">
-                                    {allImages.map((img, i) => (
-                                        <button 
-                                            key={`${img}-${i}`}
-                                            onClick={() => { setActiveImage(img); setCurrentImageIndex(i); }} 
-                                            className={`flex-shrink-0 w-24 h-24 border-2 rounded-lg p-1.5 bg-white transition-all ${
-                                                activeImage === img ? 'border-brand-blue ring-2 ring-brand-blue shadow-md scale-105' : 'border-gray-200 hover:border-gray-400'
-                                            }`}
+                                <div className="flex flex-wrap gap-3 mt-6 pt-4 pb-2">
+                                    {(showAllImages ? allImages : allImages.slice(0, 3)).map((img, i) => {
+                                        const actualIndex = showAllImages ? i : i;
+                                        return (
+                                            <button 
+                                                key={`${img}-${actualIndex}`}
+                                                onClick={() => { setActiveImage(img); setCurrentImageIndex(actualIndex); }} 
+                                                className={`relative flex-shrink-0 w-24 h-24 border-2 rounded-lg p-1.5 bg-white transition-all ${
+                                                    activeImage === img ? 'border-brand-blue ring-2 ring-brand-blue ring-offset-2 shadow-md scale-105 z-10' : 'border-gray-200 hover:border-gray-400 z-0'
+                                                }`}
+                                            >
+                                                <img 
+                                                    src={getImageUrl(img)} 
+                                                    alt={`${product.name}${product.manufacturer ? ` by ${product.manufacturer}` : ''} - Image ${actualIndex + 1}`}
+                                                    className="w-full h-full object-contain rounded" 
+                                                    onError={() => setImageErrors(prev => new Set(prev).add(img))} 
+                                                    loading="lazy"
+                                                    width="96"
+                                                    height="96"
+                                                />
+                                            </button>
+                                        );
+                                    })}
+                                    {!showAllImages && allImages.length > 3 && (
+                                        <button
+                                            onClick={() => setShowAllImages(true)}
+                                            className="flex-shrink-0 w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-brand-blue transition-all flex flex-col items-center justify-center group"
                                         >
-                                            <img 
-                                                src={getImageUrl(img)} 
-                                                alt={`${product.name}${product.manufacturer ? ` by ${product.manufacturer}` : ''} - Image ${i + 1}`}
-                                                className="w-full h-full object-contain rounded" 
-                                                onError={() => setImageErrors(prev => new Set(prev).add(img))} 
-                                                loading="lazy"
-                                                width="96"
-                                                height="96"
-                                            />
+                                            <svg className="w-6 h-6 text-gray-600 mb-1 group-hover:text-brand-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            <span className="text-xs font-semibold text-gray-600 group-hover:text-brand-blue transition-colors">View More</span>
+                                            <span className="text-[10px] text-gray-500 mt-0.5 group-hover:text-brand-blue transition-colors">+{allImages.length - 3}</span>
                                         </button>
-                                    ))}
+                                    )}
+                                    {showAllImages && (
+                                        <button
+                                            onClick={() => setShowAllImages(false)}
+                                            className="flex-shrink-0 w-24 h-24 border-2 border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 hover:border-brand-blue transition-all flex flex-col items-center justify-center group"
+                                        >
+                                            <svg className="w-6 h-6 text-gray-600 mb-1 group-hover:text-brand-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                            </svg>
+                                            <span className="text-xs font-semibold text-gray-600 group-hover:text-brand-blue transition-colors">Show Less</span>
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1092,7 +1306,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                         <div className="sticky top-24 space-y-6">
                             <div>
                                 <p className="font-bold text-gray-600 uppercase tracking-wide text-sm mb-1">{product.manufacturer}</p>
-                                <h1 className="text-4xl font-extrabold text-gray-900 mb-2">{product.name}</h1>
+                                <h2 className="text-4xl font-extrabold text-gray-900 mb-2">{product.name}</h2>
                                 <p className="text-sm text-gray-500 mb-4 font-semibold">Item #: {selectedVariant?.itemNumber || product.itemNumber}</p>
                                 <div className="flex items-baseline gap-3 mb-4">
                                     <p className="text-3xl font-extrabold text-brand-blue">{product.displayPrice || `$${product.price}`}</p>
@@ -1109,8 +1323,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                     <div className="mb-3">
                                         <input type="text" placeholder="Search variants..." value={variantSearchTerm} onChange={(e) => setVariantSearchTerm(e.target.value)} className="w-full pl-3 pr-10 py-2 border-2 border-gray-300 rounded-lg text-sm bg-white focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 focus:outline-none" />
                                     </div>
-                                    <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                        <div className="space-y-2">
+                                    <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar pt-2 pb-2">
+                                        <div className="space-y-2 pl-4">
                                             {displayedVariants.map((v: any, index: number) => {
                                                 const variantName = getVariantDisplayName(v, index);
                                                 const isSelected = selectedVariant && (
@@ -1122,14 +1336,21 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                                     <button 
                                                         key={v.id || v.sku || v.itemNumber || index} 
                                                         onClick={() => setSelectedVariant(v)} 
-                                                        className={`w-full text-left p-3 border-2 rounded-lg transition-all ${
-                                                            isSelected ? 'border-brand-blue bg-brand-blue-50 ring-2 ring-brand-blue shadow-md' : 'border-gray-200 bg-white hover:border-brand-blue/50'
+                                                        className={`relative w-full text-left p-3 border-2 rounded-lg transition-all ${
+                                                            isSelected ? 'border-brand-blue bg-brand-blue text-white ring-2 ring-brand-blue ring-offset-2 shadow-md z-10' : 'border-gray-200 bg-white hover:border-brand-blue/50 z-0'
                                                         }`}
                                                     >
                                                         <div className="flex items-center justify-between gap-3">
-                                                            <h4 className={`font-bold text-sm ${isSelected ? 'text-brand-blue' : 'text-gray-900'}`}>{variantName}</h4>
-                                                            {v.displayPrice && <span className={`font-bold text-base ${isSelected ? 'text-brand-blue' : 'text-brand-blue'}`}>{v.displayPrice}</span>}
-                                                            {isSelected && <div className="w-5 h-5 bg-brand-blue rounded-full flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>}
+                                                            <h4 className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-gray-900'}`}>{variantName}</h4>
+                                                            {v.displayPrice && <span className={`font-bold text-base ${isSelected ? 'text-white' : 'text-brand-blue'}`}>{v.displayPrice}</span>}
+                                                            {isSelected && (
+                                                                <div className="flex items-center gap-1 text-xs text-white/90">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                    <span>Selected</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </button>
                                                 );
@@ -1155,13 +1376,44 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                     </div>
                                 </div>
                                 <button 
+                                    id="main-cta"
                                     onClick={handleAddToCart} 
-                                    disabled={isAdded} 
-                                    className={`w-full font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl text-base ${
-                                        isAdded ? 'bg-green-600 text-white' : 'bg-brand-blue text-white hover:bg-brand-blue-700'
+                                    disabled={btnState === 'loading' || btnState === 'success'}
+                                    className={`w-full font-bold py-4 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl text-base relative overflow-hidden ${
+                                        btnState === 'success' 
+                                            ? 'bg-green-600 text-white' 
+                                            : btnState === 'loading'
+                                            ? 'bg-brand-blue-600 text-white cursor-wait'
+                                            : 'bg-brand-blue text-white hover:bg-brand-blue-700 active:scale-95'
                                     }`}
                                 >
-                                    {isAdded ? <><AddedIcon /> Added!</> : 'Add to Cart'}
+                                    {btnState === 'idle' && (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                            <span>Add to Cart</span>
+                                            {bundleSavings > 0 && (
+                                                <span className="ml-2 text-xs opacity-80 border-l border-white/20 pl-2">
+                                                    Save ${bundleSavings.toFixed(0)}
+                                                </span>
+                                            )}
+                                        </>
+                                    )}
+                                    {btnState === 'loading' && (
+                                        <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    )}
+                                    {btnState === 'success' && (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span>Added to Cart!</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -1172,7 +1424,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                 <section className="border-t border-gray-200 pt-8 mt-8">
                     <div className="border-b border-gray-200 mb-6">
                         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                            {['details', 'specifications', 'documents'].map(tab => (
+                            {['details', 'specifications', 'reviews', 'documents'].map(tab => (
                                 <button 
                                     key={tab} 
                                     onClick={() => setActiveTab(tab)} 
@@ -1265,10 +1517,178 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                                     </tbody>
                                 </table>
                             </div> : <p className="text-gray-500">No specifications available.</p>)} 
+                        {activeTab === 'reviews' && (
+                            <ProductReviews 
+                                itemNumber={itemNumber}
+                                productName={product.name}
+                                productCategory={product.category}
+                            />
+                        )}
                         {activeTab === 'documents' && <p className="text-gray-500">No documents available for this product.</p>}
                     </div>
                 </section>
             </div>
+
+            {/* Bundle Section */}
+            {relatedProducts.length > 0 && (
+                <section className="mt-12 border-t border-gray-200 pt-12">
+                    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="bg-gray-50 rounded-2xl p-6 md:p-8 border border-blue-100 shadow-sm space-y-4 relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-24 h-24 bg-blue-500/10 rounded-full blur-3xl"></div>
+                            <div className="flex justify-between items-center mb-2 relative z-10">
+                                <h3 className="font-bold text-gray-900 flex items-center gap-2 text-lg md:text-xl">
+                                    <span className="bg-brand-blue text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                                    Complete Your Setup
+                                </h3>
+                                {bundleSavings > 0 && (
+                                    <span className="text-red-600 text-xs font-bold flex items-center gap-1 animate-pulse">
+                                        Bundle Unlocked! Save ${bundleSavings.toFixed(0)}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="space-y-3 relative z-10">
+                                {/* Main Product (Locked) */}
+                                <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-gray-200 shadow-sm opacity-80">
+                                    <div className="w-5 h-5 rounded-full bg-gray-900 flex items-center justify-center">
+                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden">
+                                        <img src={product.imageUrl || (product.images && product.images[0]) || ''} alt={product.name} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-gray-900">{product.name}</p>
+                                    </div>
+                                    <span className="text-sm font-bold">{product.displayPrice || `$${product.price}`}</span>
+                                </div>
+                                {/* Related Products as Addons */}
+                                {relatedProducts.slice(0, 3).map((relatedProduct: any) => {
+                                    const isSelected = selectedBundleItems.has(relatedProduct.itemNumber || relatedProduct.id);
+                                    const price = relatedProduct.price || 0;
+                                    const isAutoSelected = price < 200 && (
+                                        (relatedProduct.name || '').toLowerCase().includes('handpiece') || 
+                                        (relatedProduct.name || '').toLowerCase().includes('motor') ||
+                                        price < 100
+                                    );
+                                    return (
+                                        <div 
+                                            key={relatedProduct.itemNumber || relatedProduct.id}
+                                            onClick={() => toggleBundleItem(relatedProduct.itemNumber || relatedProduct.id)}
+                                            className={`relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border shadow-sm ${
+                                                isSelected ? 'bg-blue-50/50 border-blue-500 ring-1 ring-blue-500' : 'bg-white border-gray-200 hover:border-blue-300'
+                                            }`}
+                                        >
+                                            {isAutoSelected && isSelected && (
+                                                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                                    Auto-Added
+                                                </span>
+                                            )}
+                                            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                                                isSelected ? 'bg-brand-blue border-brand-blue' : 'border-gray-300 bg-white'
+                                            }`}>
+                                                {isSelected && (
+                                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                                                <img src={relatedProduct.imageUrl || (relatedProduct.images && relatedProduct.images[0]) || ''} alt={relatedProduct.name} className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className={`text-sm font-bold ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
+                                                    {relatedProduct.name}
+                                                </p>
+                                                <div className="text-xs flex gap-2 mt-0.5 items-center">
+                                                    <span className={`font-bold ${isSelected ? 'text-brand-blue' : 'text-gray-600'}`}>
+                                                        {relatedProduct.displayPrice || `$${relatedProduct.price}`}
+                                                    </span>
+                                                    {isAutoSelected && (
+                                                        <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded font-semibold">
+                                                            Add-on
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                {isSelected ? (
+                                                    <svg className="w-4 h-4 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                    </svg>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Trust Badges */}
+            <section className="mt-12 border-t border-gray-200 pt-8">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-3 gap-4 text-center py-6">
+                        <div className="flex flex-col items-center gap-2">
+                            <svg className="w-6 h-6 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <span className="text-xs font-medium text-gray-700">2 Year Warranty</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                            <svg className="w-6 h-6 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            <span className="text-xs font-medium text-gray-700">Free Shipping</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                            <svg className="w-6 h-6 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            <span className="text-xs font-medium text-gray-700">Secure Payment</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* FAQ Section */}
+            <section className="mt-12 py-12 bg-blue-50">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
+                    <h2 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+                    <div className="space-y-3">
+                        {faqs.map((faq, i) => (
+                            <div key={i} className="bg-white rounded-xl shadow-sm border border-blue-100">
+                                <button 
+                                    onClick={() => setExpandedFAQ(expandedFAQ === i ? null : i)}
+                                    className="flex w-full items-center justify-between py-4 px-6 text-left font-medium text-gray-900 hover:text-brand-blue transition-colors"
+                                >
+                                    <span>{faq.q}</span>
+                                    {expandedFAQ === i ? (
+                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    )}
+                                </button>
+                                {expandedFAQ === i && (
+                                    <div className="px-6 pb-4 text-gray-600 text-sm leading-relaxed">
+                                        {faq.a}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
             {relatedProducts.length > 0 && (
                 <aside className="bg-gray-50/80 py-16 mt-12">
@@ -1294,6 +1714,63 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ itemNumber, setCu
                     </div>
                 </aside>
             )}
+
+            {/* Mobile Sticky Bottom Bar */}
+            <div className={`fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-50 md:hidden transition-transform duration-300 ${
+                showSticky ? 'translate-y-0' : 'translate-y-full'
+            }`}>
+                <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wide">Total</p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="font-extrabold text-lg text-gray-900">
+                                ${((selectedVariant?.price || product?.price || 0) * quantity + bundleItems.reduce((sum: number, item: any) => sum + (item.price || 0), 0) - bundleSavings).toFixed(2)}
+                            </span>
+                            {bundleSavings > 0 && (
+                                <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded font-bold">
+                                    -${bundleSavings.toFixed(0)}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="w-[55%]">
+                        <button 
+                            onClick={handleAddToCart}
+                            disabled={btnState === 'loading' || btnState === 'success'}
+                            className={`w-full font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-sm shadow-lg ${
+                                btnState === 'success' 
+                                    ? 'bg-green-600 text-white' 
+                                    : btnState === 'loading'
+                                    ? 'bg-brand-blue-600 text-white cursor-wait'
+                                    : 'bg-brand-blue text-white hover:bg-brand-blue-700 active:scale-95'
+                            }`}
+                        >
+                            {btnState === 'idle' && (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    Add to Cart
+                                </>
+                            )}
+                            {btnState === 'loading' && (
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            )}
+                            {btnState === 'success' && (
+                                <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Added!
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

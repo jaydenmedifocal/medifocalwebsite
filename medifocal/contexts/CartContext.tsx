@@ -23,6 +23,11 @@ interface CartContextType {
   getSubtotal: () => number;
   getItemCount: () => number;
   isLoading: boolean;
+  // Modal state
+  showAddToCartModal: boolean;
+  lastAddedItem: CartItem | null;
+  closeAddToCartModal: () => void;
+  openAddToCartModal: (item: CartItem) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -40,6 +45,8 @@ const CART_STORAGE_KEY = 'medifocal_cart';
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddToCartModal, setShowAddToCartModal] = useState(false);
+  const [lastAddedItem, setLastAddedItem] = useState<CartItem | null>(null);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -67,26 +74,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [items, isLoading]);
 
+  const openAddToCartModal = useCallback((item: CartItem) => {
+    setLastAddedItem(item);
+    setShowAddToCartModal(true);
+  }, []);
+
+  const closeAddToCartModal = useCallback(() => {
+    setShowAddToCartModal(false);
+    setLastAddedItem(null);
+  }, []);
+
   const addItem = useCallback((product: any, quantity: number = 1) => {
     setItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id || item.itemNumber === product.itemNumber);
       
+      let updatedItems: CartItem[];
+      let itemAdded: CartItem;
+
       if (existingItem) {
         // Update quantity if item already exists
-        const updatedItems = prevItems.map(item =>
+        updatedItems = prevItems.map(item =>
           item.id === existingItem.id || item.itemNumber === existingItem.itemNumber
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
-        // Track add to cart
-        trackAddToCart(
-          product.id || product.itemNumber,
-          product.name,
-          product.price || 0,
-          quantity,
-          product.category
-        );
-        return updatedItems;
+        itemAdded = { ...existingItem, quantity: existingItem.quantity + quantity };
       } else {
         // Add new item
         const newItem: CartItem = {
@@ -100,18 +112,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           manufacturer: product.manufacturer,
           category: product.category
         };
-        // Track add to cart
-        trackAddToCart(
-          newItem.id,
-          newItem.name,
-          newItem.price,
-          quantity,
-          newItem.category
-        );
-        return [...prevItems, newItem];
+        updatedItems = [...prevItems, newItem];
+        itemAdded = newItem;
       }
+
+      // Track add to cart
+      trackAddToCart(
+        itemAdded.id,
+        itemAdded.name,
+        itemAdded.price,
+        quantity,
+        itemAdded.category
+      );
+
+      // Open the modal with the item details
+      openAddToCartModal(itemAdded);
+
+      return updatedItems;
     });
-  }, []);
+  }, [openAddToCartModal]);
 
   const removeItem = useCallback((itemId: string) => {
     setItems(prevItems => {
@@ -172,7 +191,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getTotal,
     getSubtotal,
     getItemCount,
-    isLoading
+    isLoading,
+    showAddToCartModal,
+    lastAddedItem,
+    closeAddToCartModal,
+    openAddToCartModal
   };
 
   return (

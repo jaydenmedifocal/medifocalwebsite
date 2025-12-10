@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from '../contexts/AuthContext';
 import AdminDashboard from './AdminDashboardFieldService';
 import AdminOverview from './admin/AdminOverview';
+import BacklinkManagement from './admin/BacklinkManagement';
+import Reports from './admin/Reports';
 import UserManagement from './admin/UserManagement';
 import Clients from './admin/Clients';
 import ServiceOrders from './admin/ServiceOrders';
@@ -117,6 +119,7 @@ const FieldServiceApp: React.FC<FieldServiceAppProps> = ({ setCurrentView }) => 
               <Route path="invoices" element={<Invoices />} />
               <Route path="stock" element={<Stock />} />
               <Route path="sales" element={<Sales />} />
+              <Route path="backlinks" element={<BacklinkManagement />} />
               <Route path="stage-actions" element={<StageActions />} />
               <Route path="calendar" element={<Calendar />} />
               <Route path="frequency-sets" element={<FrequencySets />} />
@@ -130,6 +133,8 @@ const FieldServiceApp: React.FC<FieldServiceAppProps> = ({ setCurrentView }) => 
               <Route path="raspberry-pi" element={<RaspberryPiManagement />} />
               <Route path="aliexpress" element={<AliExpressProducts />} />
               <Route path="aliexpress/orders" element={<AliExpressOrders />} />
+              <Route path="backlinks" element={<BacklinkManagement />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
           </Routes>
         </main>

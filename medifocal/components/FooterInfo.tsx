@@ -15,6 +15,17 @@ const linkMap: Record<string, View> = {
     'Privacy Policy': { page: 'privacyPolicy' },
     'Terms of Service': { page: 'termsOfService' },
     'Returns & Refunds': { page: 'returnPolicy' },
+    'Blog': { page: 'blog' },
+    'Education Hub': { page: 'dentalEducationHub' },
+    'Equipment Repairs': { page: 'equipmentServices' },
+    'Bundles': { page: 'bundles' },
+    'Supplier Specials': { page: 'supplierSpecials' },
+    'Catalogues': { page: 'catalogues' },
+    'Partners': { page: 'partners' },
+    'Our Team': { page: 'ourTeam' },
+    'Sustainability': { page: 'sustainability' },
+    'New Products': { page: 'newProducts' },
+    'Offers': { page: 'offers' },
 };
 
 interface FooterLinkColumnProps {
@@ -95,11 +106,11 @@ const FooterInfo: React.FC<FooterInfoProps> = ({ setCurrentView }) => {
                     {/* Link Columns */}
                     <div className="lg:col-span-6">
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8">
-                             <FooterLinkColumn setCurrentView={setCurrentView} title="Shop" links={['Everyday Essentials', 'Equipment', 'Clearance Sale', 'Promotions', 'Browse All Brands']} />
+                             <FooterLinkColumn setCurrentView={setCurrentView} title="Shop" links={['Everyday Essentials', 'Equipment', 'Clearance Sale', 'Promotions', 'Browse All Brands', 'Bundles', 'Supplier Specials', 'Catalogues', 'New Products', 'Offers']} />
                              <FooterLinkColumn setCurrentView={setCurrentView} title="For Your Practice" links={['Dental Solutions', 'Education Hub', 'Blog', 'Buying Guides', 'Equipment Repairs', 'Patient Resources']} />
-                             <FooterLinkColumn setCurrentView={setCurrentView} title="About Medifocal" links={['Our Story', 'Careers', 'Contact Us', 'Medifocal Cares']} />
+                             <FooterLinkColumn setCurrentView={setCurrentView} title="About Medifocal" links={['Our Story', 'Our Team', 'Partners', 'Sustainability', 'Contact Us', 'Medifocal Cares']} />
                              <FooterLinkColumn setCurrentView={setCurrentView} title="Customer Service" links={['My Account', 'FAQs', 'Returns & Refunds']} />
-                             <FooterLinkColumn setCurrentView={setCurrentView} title="Policies" links={['Shipping Policy', 'Privacy Policy', 'Terms of Service']} />
+                             <FooterLinkColumn setCurrentView={setCurrentView} title="Policies" links={['Shipping Policy', 'Privacy Policy', 'Terms of Service', 'Returns & Refunds']} />
                         </div>
                     </div>
                     

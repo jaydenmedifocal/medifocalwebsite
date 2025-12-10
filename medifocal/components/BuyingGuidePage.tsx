@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface BuyingGuidePageProps {
@@ -356,14 +355,6 @@ const BuyingGuidePage: React.FC<BuyingGuidePageProps> = ({ guideSlug, setCurrent
           section: guide.category,
           tags: guide.keywords.split(', ')
         }}
-      />
-      <Breadcrumbs
-        items={[
-          { label: 'Home', view: { page: 'home' } },
-          { label: 'Buying Guides', view: { page: 'buyingGuides' } },
-          { label: guide.category }
-        ]}
-        setCurrentView={setCurrentView}
       />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">

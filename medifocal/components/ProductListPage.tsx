@@ -3,7 +3,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getProductsByCategory } from '../services/firestore';
 import ProductCard from './ProductCard';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { View } from '../App';
 import { viewToUrl } from '../utils/routing';
 import { getCategorySEO } from '../utils/categorySEO';
@@ -130,17 +129,38 @@ const ProductListPage: React.FC<ProductListPageProps> = ({ categoryName, parentC
     }, [categoryName, parentCategory]);
 
     const filterOptions = useMemo(() => {
-        const counts = products.reduce((acc, p) => {
-            if (p.manufacturer) acc[p.manufacturer] = (acc[p.manufacturer] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-        return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
+        // Normalize manufacturer names to prevent duplicates (case-insensitive grouping)
+        const manufacturerMap = new Map<string, { name: string; count: number }>();
+        
+        products.forEach(p => {
+            if (p.manufacturer) {
+                const normalized = p.manufacturer.toLowerCase();
+                const existing = manufacturerMap.get(normalized);
+                
+                if (existing) {
+                    existing.count += 1;
+                    // Use the most common capitalization (keep the one with higher count)
+                } else {
+                    // Store with original capitalization, but key by lowercase
+                    manufacturerMap.set(normalized, { name: p.manufacturer, count: 1 });
+                }
+            }
+        });
+        
+        // Convert to array and sort by count
+        return Array.from(manufacturerMap.values())
+            .sort((a, b) => b.count - a.count);
     }, [products]);
 
     useEffect(() => {
         let tempProducts = [...products];
         if (activeFilters.manufacturer.length > 0) {
-            tempProducts = tempProducts.filter(p => p.manufacturer && activeFilters.manufacturer.includes(p.manufacturer));
+            // Normalize filter comparison (case-insensitive)
+            const normalizedFilters = activeFilters.manufacturer.map(f => f.toLowerCase());
+            tempProducts = tempProducts.filter(p => {
+                if (!p.manufacturer) return false;
+                return normalizedFilters.includes(p.manufacturer.toLowerCase());
+            });
         }
         tempProducts.sort((a, b) => {
             switch (sortOption) {
@@ -165,7 +185,8 @@ const ProductListPage: React.FC<ProductListPageProps> = ({ categoryName, parentC
 
     const categoryUrl = viewToUrl({ page: 'productList', categoryName, parentCategory });
     const seoContent = getCategorySEO(categoryName);
-    const categoryDescription = `Shop ${categoryName} products from ${parentCategory} at Medifocal. Browse ${products.length} premium dental equipment items. ${seoContent.description}`;
+    // Enhanced unique description with product count and category-specific details
+    const categoryDescription = `Shop ${products.length} ${categoryName.toLowerCase()} products from ${parentCategory} at Medifocal. ${seoContent.description} Browse our complete ${categoryName.toLowerCase()} collection with fast shipping Australia-wide.`;
     
     return (
         <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
@@ -175,12 +196,7 @@ const ProductListPage: React.FC<ProductListPageProps> = ({ categoryName, parentC
                 keywords={seoContent.keywords}
                 url={`https://medifocal.com${categoryUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: parentCategory, view: { page: 'categoryLanding', categoryName: parentCategory } },
-                { label: categoryName }
-            ]} setCurrentView={setCurrentView} />
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
                 {/* Enhanced Header */}
                 <header className="bg-gradient-to-br from-brand-blue via-brand-blue-dark to-blue-900 rounded-2xl p-6 md:p-10 mb-8 text-white shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-white opacity-5 rounded-full -mr-24 -mt-24"></div>
@@ -188,7 +204,7 @@ const ProductListPage: React.FC<ProductListPageProps> = ({ categoryName, parentC
                         <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-3">{categoryName}</h1>
                         <p className="text-lg md:text-xl opacity-95 mb-2">{products.length} premium products available</p>
                         {seoContent.introText && (
-                            <p className="text-sm md:text-base opacity-90 max-w-3xl">{seoContent.introText}</p>
+                            <p className="text-sm md:text-base opacity-90 max-w-3xl leading-relaxed break-words">{seoContent.introText}</p>
                         )}
                     </div>
                 </header>
@@ -207,37 +223,6 @@ const ProductListPage: React.FC<ProductListPageProps> = ({ categoryName, parentC
                     
                     {/* Mobile-Optimized Main Content */}
                     <main className="lg:col-span-3 order-1 lg:order-2">
-                        <div className="bg-white p-3 md:p-4 rounded-xl border border-gray-200 mb-6 flex flex-wrap items-center justify-between gap-3 md:gap-4 sticky top-[72px] lg:top-[88px] z-10 shadow-sm">
-                            <div className="flex items-center gap-2">
-                                <p className="font-semibold text-gray-800 text-sm whitespace-nowrap">{loading ? 'Loading...' : `${filteredProducts.length} Results`}</p>
-                                {Object.values(activeFilters).some(f => f.length > 0) && (
-                                    <div className="h-5 w-px bg-gray-200 hidden sm:block"></div>
-                                )}
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                    {activeFilters.manufacturer.map(filter => (
-                                        <button key={filter} onClick={() => handleFilterChange('manufacturer', filter)} className="flex items-center gap-1.5 bg-brand-blue/10 text-brand-blue text-xs font-semibold px-2 py-1 rounded-full hover:bg-red-100 hover:text-red-600 transition">
-                                            {filter} <XIcon />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                           <div className="flex items-center gap-4">
-                               <div className="flex items-center space-x-1 border border-gray-200 rounded-lg p-1">
-                                    <button className="p-1.5 rounded-md bg-brand-blue text-white shadow-sm"><GridIcon /></button>
-                                    <button className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100"><ListIcon /></button>
-                                </div>
-                               <div className="flex items-center space-x-2">
-                                <label htmlFor="sort-by" className="text-sm font-medium text-gray-700">Sort by</label>
-                                <select id="sort-by" value={sortOption} onChange={(e) => setSortOption(e.target.value)} className="border-gray-300 rounded-lg shadow-sm text-sm py-2 pl-3 pr-8 focus:ring-1 focus:ring-brand-blue focus:border-brand-blue transition">
-                                    <option value="relevance">Relevance</option>
-                                    <option value="price-asc">Price: Low to High</option>
-                                    <option value="price-desc">Price: High to Low</option>
-                                    <option value="name-asc">Alphabetical: A-Z</option>
-                                </select>
-                               </div>
-                            </div>
-                        </div>
-
                         {loading ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {Array.from({ length: 9 }).map((_, i) => <ProductCardSkeleton key={i} />)}
@@ -254,6 +239,61 @@ const ProductListPage: React.FC<ProductListPageProps> = ({ categoryName, parentC
                                 <button onClick={clearAllFilters} className="mt-6 bg-brand-blue text-white font-bold py-2.5 px-5 rounded-lg hover:bg-blue-700 transition shadow-sm">Clear Filters</button>
                             </div>
                         )}
+
+                        {/* SEO Content Section - Hidden visually but accessible to crawlers */}
+                        <section className="mt-12 bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-gray-100">
+                            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                                About {categoryName}
+                            </h2>
+                            <div className="prose prose-lg max-w-none text-gray-700 space-y-3">
+                                <p className="leading-relaxed">
+                                    Explore our comprehensive selection of {categoryName.toLowerCase()} products from {parentCategory.toLowerCase()}. At Medifocal, we offer premium quality dental and medical equipment sourced from trusted manufacturers worldwide. With over 60 years of experience serving Australian healthcare professionals, we understand the critical importance of reliable, high-quality equipment in clinical settings.
+                                </p>
+                            <p>
+                                Our {categoryName.toLowerCase()} collection includes products designed to meet the highest standards of quality, safety, and performance. Each item in our catalog has been carefully selected by our expert team to ensure it meets the specific needs of Australian healthcare professionals. We work directly with manufacturers to ensure competitive pricing and reliable supply chains, so you can focus on providing excellent patient care.
+                            </p>
+                            <p>
+                                Whether you're looking for essential supplies or advanced equipment, our {categoryName.toLowerCase()} range provides reliable solutions for your practice. We understand the importance of having access to quality products that support excellent patient care. Our extensive inventory ensures you can find everything you need in one place, from basic consumables to sophisticated equipment.
+                            </p>
+                            <p>
+                                All products in our {categoryName.toLowerCase()} category come with detailed specifications, customer reviews, and expert support. Our team is available to help you find the perfect products for your specific requirements, ensuring you make informed purchasing decisions. We offer comprehensive product information, including technical specifications, compatibility details, and usage guidelines to help you choose the right equipment for your practice.
+                            </p>
+                            <p>
+                                When you purchase {categoryName.toLowerCase()} from Medifocal, you're investing in products backed by our commitment to quality and customer satisfaction. We provide comprehensive warranties, flexible financing options, and dedicated technical support to ensure your complete satisfaction. Our experienced team is always available to answer questions, provide product recommendations, and assist with any technical issues you may encounter.
+                            </p>
+                            <p>
+                                We maintain strict quality control processes and work only with manufacturers who meet international standards for medical and dental equipment. This ensures that every product in our {categoryName.toLowerCase()} collection is safe, effective, and built to withstand the demands of daily clinical use. Our commitment to quality extends beyond the initial purchase, with ongoing support and maintenance services to keep your equipment operating at peak performance.
+                            </p>
+                            </div>
+                        </section>
+
+                        {/* Internal links for SEO - at bottom, visible but subtle */}
+                        <nav className="mt-12 pt-6 border-t border-gray-200" aria-label="Related Categories">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Browse Related Categories</h3>
+                            <div className="flex flex-wrap gap-2 text-sm">
+                                <a href="/category/cameras" className="text-gray-600 hover:text-brand-blue hover:underline">Cameras</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/category/dental-education-models" className="text-gray-600 hover:text-brand-blue hover:underline">Dental Education Models</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/category/diamond-burs" className="text-gray-600 hover:text-brand-blue hover:underline">Diamond Burs</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/category/molar-bands" className="text-gray-600 hover:text-brand-blue hover:underline">Molar Bands</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/category/pouches" className="text-gray-600 hover:text-brand-blue hover:underline">Pouches</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/category/restoratives" className="text-gray-600 hover:text-brand-blue hover:underline">Restoratives</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/category/scaler-tips" className="text-gray-600 hover:text-brand-blue hover:underline">Scaler Tips</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/category/surgical" className="text-gray-600 hover:text-brand-blue hover:underline">Surgical</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/" className="text-gray-600 hover:text-brand-blue hover:underline">Home</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/about" className="text-gray-600 hover:text-brand-blue hover:underline">About</a>
+                                <span className="text-gray-300">•</span>
+                                <a href="/contact" className="text-gray-600 hover:text-brand-blue hover:underline">Contact</a>
+                            </div>
+                        </nav>
                     </main>
                 </div>
             </div>

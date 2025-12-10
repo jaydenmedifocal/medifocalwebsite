@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface OffersPageProps {
@@ -42,10 +41,6 @@ const OffersPage: React.FC<OffersPageProps> = ({ setCurrentView }) => {
                 description="Save on premium dental equipment with Medifocal's latest offers and sales. Exclusive discounts on autoclaves, dental chairs, imaging equipment, and more. Limited time offers."
                 url={`https://medifocal.com${offersUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Offers' }
-            ]} setCurrentView={setCurrentView} />
             <div className="container mx-auto px-4 py-8">
 
                 <div className="mb-10">

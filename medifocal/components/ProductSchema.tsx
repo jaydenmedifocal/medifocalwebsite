@@ -35,14 +35,22 @@ const ProductSchema: React.FC<ProductSchemaProps> = ({ product }) => {
     }
   }
   
+  // Ensure description is valid and not empty
+  const productDescription = product.description || 
+    `${product.name} - Premium dental equipment from ${product.manufacturer || 'Medifocal'}. Available at Medifocal with fast shipping across Australia.`;
+  
+  // Ensure images array is valid (not empty array)
+  const validImages = productImages.length > 0 ? productImages : 
+    (product.imageUrl ? [product.imageUrl.startsWith('http') ? product.imageUrl : `https://medifocal.com${product.imageUrl}`] : []);
+  
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
-    "name": product.name,
-    "sku": product.itemNumber,
-    "mpn": product.itemNumber, // Manufacturer Part Number
-    "description": product.description || `${product.name} - Premium dental equipment from ${product.manufacturer || 'Medifocal'}. Available at Medifocal with fast shipping across Australia.`,
-    "image": productImages.length > 0 ? productImages : [],
+    "name": product.name || "Dental Equipment",
+    "sku": product.itemNumber || "",
+    "mpn": product.itemNumber || "", // Manufacturer Part Number
+    "description": productDescription,
+    "image": validImages.length > 0 ? validImages : ["https://medifocal.com/og-image.jpg"],
     "brand": {
       "@type": "Brand",
       "name": product.manufacturer || "Medifocal"
@@ -97,7 +105,7 @@ const ProductSchema: React.FC<ProductSchemaProps> = ({ product }) => {
         }
       }
     },
-    ...(product.rating && product.reviewCount ? {
+    ...(product.rating && product.reviewCount && product.rating > 0 && product.reviewCount > 0 ? {
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": product.rating.toString(),
@@ -107,6 +115,11 @@ const ProductSchema: React.FC<ProductSchemaProps> = ({ product }) => {
       }
     } : {})
   };
+  
+  // Validate schema has required fields
+  if (!productSchema.name || !productSchema.sku) {
+    console.warn('ProductSchema: Missing required fields', product);
+  }
 
   return (
     <script

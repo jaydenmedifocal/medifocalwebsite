@@ -9,9 +9,13 @@ GITHUB_*.md
 PERFORMANCE_*.md
 PUSH_*.md
 PUSH_*.sh
+SECURITY_FIX.md
+TROUBLESHOOT_PUSH.md
+SEO_AUDIT_REPORT.md
 *product_images_report*
 *Cingol*
 *operation manual*
+seo-analysis.html
 
 # Temporary folders
 blog-factory/
@@ -23,3 +27,13 @@ temp_medifocal_extract/
 *firebase-adminsdk*.json
 *.zip
 
+# Medifocal subdirectory cleanup
+medifocal/ADMIN_ACCESS.md
+medifocal/FIREBASE_AUTH_INTEGRATION.md
+medifocal/test-auth-manual.md
+medifocal/AUTH_TEST_RESULTS.md
+medifocal/GOOGLE_SIGNIN_FIX.md
+medifocal/scripts/*.md
+medifocal/scripts/*.sh
+medifocal/scripts/*.py
+medifocal/scripts/*.service

@@ -80,16 +80,32 @@ const EverydayEssentialsPage: React.FC<EverydayEssentialsPageProps> = ({ setCurr
             ? essentialProducts 
             : essentialProducts.filter(p => p.category === activeSubCategory || p.parentCategory === activeSubCategory);
 
-        const createOptions = (key: keyof Product) => {
+        const createOptions = (key: keyof Product, normalizeCase: boolean = false) => {
             const values = baseProducts.map(p => p[key]).filter(Boolean) as string[];
-            const counts = values.reduce((acc, val) => {
-                acc[val] = (acc[val] || 0) + 1;
-                return acc;
-            }, {} as Record<string, number>);
-            return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
+            
+            if (normalizeCase && key === 'manufacturer') {
+                // Normalize manufacturer names (case-insensitive grouping)
+                const manufacturerMap = new Map<string, { name: string; count: number }>();
+                values.forEach(val => {
+                    const normalized = val.toLowerCase();
+                    const existing = manufacturerMap.get(normalized);
+                    if (existing) {
+                        existing.count += 1;
+                    } else {
+                        manufacturerMap.set(normalized, { name: val, count: 1 });
+                    }
+                });
+                return Array.from(manufacturerMap.values()).sort((a, b) => b.count - a.count);
+            } else {
+                const counts = values.reduce((acc, val) => {
+                    acc[val] = (acc[val] || 0) + 1;
+                    return acc;
+                }, {} as Record<string, number>);
+                return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
+            }
         };
         return {
-            manufacturer: createOptions('manufacturer'),
+            manufacturer: createOptions('manufacturer', true),
             parentCategory: createOptions('parentCategory'),
             category: createOptions('category')
         };
@@ -175,22 +191,6 @@ const EverydayEssentialsPage: React.FC<EverydayEssentialsPageProps> = ({ setCurr
                     </aside>
                     
                     <main className="lg:col-span-3">
-                        <div className="bg-white p-3 rounded-lg shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
-                             <div className="flex items-center space-x-2">
-                                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md ${viewMode === 'grid' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}><GridIcon /></button>
-                                <button onClick={() => setViewMode('list')} className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}><ListIcon /></button>
-                            </div>
-                            <p className="font-semibold text-gray-700 text-sm">Showing {Math.min(itemsToShow, filteredProducts.length)} of {filteredProducts.length} products</p>
-                            <div className="flex items-center space-x-2">
-                                <label htmlFor="sort-by" className="text-sm font-medium text-gray-700">Sort</label>
-                                <select id="sort-by" className="border-gray-300 rounded-md shadow-sm focus:border-brand-blue focus:ring-brand-blue text-sm" value={sortOption} onChange={e => setSortOption(e.target.value)}>
-                                    <option value="relevance">Relevance</option>
-                                    <option value="price-asc">Price: Low to High</option>
-                                    <option value="price-desc">Price: High to Low</option>
-                                    <option value="name-asc">Name: A-Z</option>
-                                </select>
-                            </div>
-                        </div>
 
                         {filteredProducts.length > 0 ? (
                             <>

@@ -62,6 +62,32 @@ service cloud.firestore {
         (resource.data.customerId == request.auth.uid || isAdminOrTechnician());
     }
     
+    // Reviews collection - public read, anyone can create (guest reviews allowed)
+    match /reviews/{reviewId} {
+      allow read: if true; // Public read access for reviews
+      allow create: if true; // Allow guest reviews (no authentication required)
+      allow update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdminOrTechnician());
+      allow delete: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdminOrTechnician());
+    }
+    
+    // Backlinks collection - admin only
+    match /backlinks/{backlinkId} {
+      allow read: if isAuthenticated() && isAdminOrTechnician();
+      allow create: if isAuthenticated() && isAdminOrTechnician();
+      allow update: if isAuthenticated() && isAdminOrTechnician();
+      allow delete: if isAuthenticated() && isAdminOrTechnician();
+    }
+    
+    // Backlink jobs collection - admin only, functions can write
+    match /backlink_jobs/{jobId} {
+      allow read: if isAuthenticated() && isAdminOrTechnician();
+      allow create: if isAuthenticated() && isAdminOrTechnician();
+      allow update: if true; // Functions can update
+      allow delete: if isAuthenticated() && isAdminOrTechnician();
+    }
+    
     // Raspberry Pi Status - admins can read, service account can write
     match /raspberry_pi_status/{document} {
       allow read: if isAdminOrTechnician();

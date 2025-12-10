@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 const PromotionsPage: React.FC<{ setCurrentView: (view: View) => void }> = ({ setCurrentView }) => {
@@ -59,10 +58,6 @@ const PromotionsPage: React.FC<{ setCurrentView: (view: View) => void }> = ({ se
                 description="Browse all promotions, special offers, and discounts on dental equipment. Supplier specials, bundles, clearance items, and more."
                 url={`https://medifocal.com${promotionsUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Promotions' }
-            ]} setCurrentView={setCurrentView} />
             
             <div className="container mx-auto px-4 py-8">
                 <div className="bg-gradient-to-r from-brand-blue to-blue-700 text-white rounded-xl p-8 mb-8 shadow-lg">
@@ -95,4 +90,6 @@ const PromotionsPage: React.FC<{ setCurrentView: (view: View) => void }> = ({ se
 };
 
 export default PromotionsPage;
+
+
 

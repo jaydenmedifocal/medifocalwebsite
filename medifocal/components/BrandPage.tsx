@@ -3,7 +3,6 @@ import { View } from '../App';
 import { searchProducts, getAllProducts } from '../services/firestore';
 import ProductCard from './ProductCard';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface BrandPageProps {
@@ -66,14 +65,6 @@ const BrandPage: React.FC<BrandPageProps> = ({ brandName, setCurrentView }) => {
         description={pageDescription}
         keywords={`${brandName}, ${brandName} dental products, ${brandName} dental supplies, dental equipment ${brandName}, ${brandName} Australia, dental supplies Australia`}
         url={`https://medifocal.com${pageUrl}`}
-      />
-      <Breadcrumbs 
-        items={[
-          { label: 'Home', view: { page: 'home' } },
-          { label: 'Brands', view: { page: 'brands' } },
-          { label: brandName }
-        ]} 
-        setCurrentView={setCurrentView} 
       />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -244,4 +235,6 @@ const BrandPage: React.FC<BrandPageProps> = ({ brandName, setCurrentView }) => {
 };
 
 export default BrandPage;
+
+
 

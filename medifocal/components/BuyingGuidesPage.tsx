@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface BuyingGuidesPageProps {
@@ -42,13 +41,6 @@ const BuyingGuidesPage: React.FC<BuyingGuidesPageProps> = ({ setCurrentView }) =
         description="Expert buying guides for dental equipment. Learn how to choose dental chairs, handpieces, sterilization equipment, and more. Expert advice from Medifocal's 60+ years of experience."
         keywords="dental equipment buying guide, how to choose dental chair, dental handpiece guide, autoclave buying guide, dental practice setup, dental equipment Australia"
         url={`https://medifocal.com${pageUrl}`}
-      />
-      <Breadcrumbs
-        items={[
-          { label: 'Home', view: { page: 'home' } },
-          { label: 'Buying Guides' }
-        ]}
-        setCurrentView={setCurrentView}
       />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -120,4 +112,6 @@ const BuyingGuidesPage: React.FC<BuyingGuidesPageProps> = ({ setCurrentView }) =
 };
 
 export default BuyingGuidesPage;
+
+
 

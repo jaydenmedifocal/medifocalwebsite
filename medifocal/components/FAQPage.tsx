@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface FAQPageProps {
@@ -113,13 +112,6 @@ const FAQPage: React.FC<FAQPageProps> = ({ category = 'general', setCurrentView 
         description={`Frequently asked questions about ${category === 'general' ? 'Medifocal and our services' : category.replace('-', ' ')}. Get answers to common questions about dental equipment, shipping, warranties, and more.`}
         keywords={`${category} FAQ, dental equipment questions, ${category} Australia, Medifocal FAQ`}
         url={`https://medifocal.com${pageUrl}`}
-      />
-      <Breadcrumbs
-        items={[
-          { label: 'Home', view: { page: 'home' } },
-          { label: 'FAQs' }
-        ]}
-        setCurrentView={setCurrentView}
       />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">

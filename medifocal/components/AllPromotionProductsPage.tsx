@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import ProductCard from './ProductCard';
 import { viewToUrl } from '../utils/routing';
 import { getAllProducts } from '../services/firestore';
@@ -81,11 +80,6 @@ const AllPromotionProductsPage: React.FC<{ setCurrentView: (view: View) => void 
                 description="Browse all promotion products at Medifocal. Special offers, discounts, and featured products on dental equipment, supplies, and more. Limited time deals."
                 url={`https://medifocal.com${promotionUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Promotions', view: { page: 'promotions' } },
-                { label: 'All Promotion Products' }
-            ]} setCurrentView={setCurrentView} />
             
             <div className="container mx-auto px-4 py-8">
                 <div className="bg-gradient-to-r from-brand-blue to-blue-700 text-white rounded-xl p-8 mb-8 shadow-lg">
@@ -139,4 +133,6 @@ const AllPromotionProductsPage: React.FC<{ setCurrentView: (view: View) => void 
 };
 
 export default AllPromotionProductsPage;
+
+
 

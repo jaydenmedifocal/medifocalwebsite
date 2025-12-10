@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 const CataloguesPage: React.FC<{ setCurrentView: (view: View) => void }> = ({ setCurrentView }) => {
@@ -46,11 +45,6 @@ const CataloguesPage: React.FC<{ setCurrentView: (view: View) => void }> = ({ se
                 description="Download our latest product catalogues in PDF format. Browse dental equipment, supplies, and services from Medifocal."
                 url={`https://medifocal.com${cataloguesUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Promotions', view: { page: 'promotions' } },
-                { label: 'Catalogues' }
-            ]} setCurrentView={setCurrentView} />
             
             <div className="container mx-auto px-4 py-8">
                 <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-xl p-8 mb-8 shadow-lg">

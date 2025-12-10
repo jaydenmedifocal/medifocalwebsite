@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getAllProducts } from '../services/firestore';
 import ProductCard from './ProductCard';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { View } from '../App';
 import { viewToUrl } from '../utils/routing';
 
@@ -144,23 +143,38 @@ const NewProductsPage: React.FC<NewProductsPageProps> = ({ setCurrentView }) => 
     }, []);
 
     const filterOptions = useMemo(() => {
-      const createOptions = (key: keyof Product, isArray = false) => {
+      const createOptions = (key: keyof Product, isArray = false, normalizeCase: boolean = false) => {
         const allValues = isArray
             ? newProducts.flatMap(p => (p[key] as string[] | undefined) || [])
             : newProducts.map(p => p[key]).filter(Boolean) as string[];
         
-        const counts = allValues.reduce((acc, val) => {
-            acc[val] = (acc[val] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-        
-        return Object.entries(counts)
-            .map(([name, count]) => ({ name, count }))
-            .sort((a,b) => b.count - a.count);
+        if (normalizeCase && key === 'manufacturer') {
+            // Normalize manufacturer names (case-insensitive grouping)
+            const manufacturerMap = new Map<string, { name: string; count: number }>();
+            allValues.forEach(val => {
+                const normalized = val.toLowerCase();
+                const existing = manufacturerMap.get(normalized);
+                if (existing) {
+                    existing.count += 1;
+                } else {
+                    manufacturerMap.set(normalized, { name: val, count: 1 });
+                }
+            });
+            return Array.from(manufacturerMap.values()).sort((a, b) => b.count - a.count);
+        } else {
+            const counts = allValues.reduce((acc, val) => {
+                acc[val] = (acc[val] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+            
+            return Object.entries(counts)
+                .map(([name, count]) => ({ name, count }))
+                .sort((a,b) => b.count - a.count);
+        }
     };
 
         return {
-            manufacturers: createOptions('manufacturer'),
+            manufacturers: createOptions('manufacturer', false, true),
             categories: createOptions('category'),
             parentCategories: createOptions('parentCategory'),
             procedures: createOptions('procedure', true),
@@ -171,7 +185,8 @@ const NewProductsPage: React.FC<NewProductsPageProps> = ({ setCurrentView }) => 
         let products = [...newProducts];
 
         if (activeFilters.manufacturer.length > 0) {
-            products = products.filter(p => p.manufacturer && activeFilters.manufacturer.includes(p.manufacturer));
+            const normalizedFilters = activeFilters.manufacturer.map(f => f.toLowerCase());
+            products = products.filter(p => p.manufacturer && normalizedFilters.includes(p.manufacturer.toLowerCase()));
         }
         if (activeFilters.category.length > 0) {
             products = products.filter(p => p.category && activeFilters.category.includes(p.category));
@@ -263,25 +278,6 @@ const NewProductsPage: React.FC<NewProductsPageProps> = ({ setCurrentView }) => 
                         </div>
 
                         {/* Controls */}
-                        <div className="bg-white border border-gray-200 p-4 rounded-lg mb-6 flex justify-between items-center shadow-sm">
-                            <span className="text-sm text-gray-600">
-                                Showing <span className="font-bold text-gray-900">{filteredProducts.length}</span> of <span className="font-bold text-gray-900">{newProducts.length}</span> products
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="sort" className="text-sm font-medium text-gray-700">Sort By:</label>
-                                <select 
-                                    id="sort"
-                                    value={sortOption}
-                                    onChange={(e) => setSortOption(e.target.value)}
-                                    className="border-gray-300 rounded-md text-sm focus:ring-brand-blue focus:border-brand-blue transition-colors"
-                                >
-                                    <option value="relevance">Relevance</option>
-                                    <option value="price-asc">Price: Low to High</option>
-                                    <option value="price-desc">Price: High to Low</option>
-                                    <option value="name-asc">Name: A-Z</option>
-                                </select>
-                            </div>
-                        </div>
 
                         {loading ? (
                             <div className="flex justify-center items-center py-20">

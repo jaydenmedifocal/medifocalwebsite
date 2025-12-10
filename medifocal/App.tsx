@@ -2,7 +2,10 @@ import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import TopNav from './components/TopNav';
 import HomePage from './components/HomePage';
 import FooterInfo from './components/FooterInfo';
+import AddToCartModal from './components/AddToCartModal';
 import { useAuth } from './contexts/AuthContext';
+import { useCart } from './contexts/CartContext';
+import { ScrollProvider } from './contexts/ScrollContext';
 import { handleGoogleRedirect } from './services/auth';
 import { trackPageView, setAnalyticsUserId, setAnalyticsUserProperties } from './services/analytics';
 import { urlToView, viewToUrl, navigateToView } from './utils/routing';
@@ -32,6 +35,7 @@ const BlogPage = lazy(() => import('./components/BlogPage'));
 const BlogPostPage = lazy(() => import('./components/BlogPostPage'));
 const AliExpressOAuthCallback = lazy(() => import('./components/AliExpressOAuthCallback'));
 const AdminPage = lazy(() => import('./components/AdminPage'));
+const GenerateReviewsPage = lazy(() => import('./components/GenerateReviewsPage'));
 const StripePortalAccess = lazy(() => import('./components/StripePortalAccess'));
 const CheckoutPage = lazy(() => import('./components/CheckoutPage'));
 const SustainabilityPage = lazy(() => import('./components/SustainabilityPage'));
@@ -224,6 +228,13 @@ const App: React.FC = () => {
   }, [currentView.page]);
 
   const { user, isFieldServiceUser, loading: authLoading } = useAuth();
+  const { 
+    showAddToCartModal, 
+    lastAddedItem, 
+    closeAddToCartModal, 
+    addItem, 
+    items 
+  } = useCart();
 
   // Track page views
   useEffect(() => {
@@ -506,6 +517,12 @@ const App: React.FC = () => {
             <AdminPage setCurrentView={setCurrentViewWithUrl} section={currentView.section} />
           </SafeSuspense>
         );
+      case 'generate-reviews':
+        return (
+          <SafeSuspense>
+            <GenerateReviewsPage />
+          </SafeSuspense>
+        );
       case 'sustainability':
         return (
           <SafeSuspense>
@@ -542,14 +559,43 @@ const App: React.FC = () => {
     }
   }, [currentView.page]);
 
+  // Get current quantity of last added item
+  const getCurrentQuantity = () => {
+    if (!lastAddedItem) return 0;
+    const item = items.find(i => i.id === lastAddedItem.id || i.itemNumber === lastAddedItem.itemNumber);
+    return item ? item.quantity : lastAddedItem.quantity;
+  };
+
+  const handleViewCart = () => {
+    closeAddToCartModal();
+    setCurrentViewWithUrl({ page: 'cart' });
+  };
+
+  const handleAddAgain = () => {
+    if (lastAddedItem) {
+      addItem(lastAddedItem, 1);
+      // Modal will automatically show again via CartContext
+    }
+  };
+
   return (
-    <div className="bg-white font-sans">
-      {!isAdminMode && <TopNav setCurrentView={setCurrentViewWithUrl} handleSearch={handleSearch} />}
-      <main className={isAdminMode ? "min-h-screen relative z-0" : "min-h-screen relative z-0"}>
-        {renderPage()}
-      </main>
-      {!isAdminMode && <FooterInfo setCurrentView={setCurrentViewWithUrl} />}
-    </div>
+    <ScrollProvider>
+      <div className="bg-white font-sans">
+        {!isAdminMode && <TopNav setCurrentView={setCurrentViewWithUrl} handleSearch={handleSearch} />}
+        <main className={isAdminMode ? "min-h-screen relative z-0" : "min-h-screen relative z-0"}>
+          {renderPage()}
+        </main>
+        {!isAdminMode && <FooterInfo setCurrentView={setCurrentViewWithUrl} />}
+        <AddToCartModal
+        isOpen={showAddToCartModal}
+        onClose={closeAddToCartModal}
+        product={lastAddedItem}
+        onViewCart={handleViewCart}
+        onAddAgain={handleAddAgain}
+        currentQuantity={getCurrentQuantity()}
+      />
+      </div>
+    </ScrollProvider>
   );
 };
 

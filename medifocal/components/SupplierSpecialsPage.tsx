@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import ProductCard from './ProductCard';
 import { viewToUrl } from '../utils/routing';
 import { getAllProducts } from '../services/firestore';
@@ -73,11 +72,6 @@ const SupplierSpecialsPage: React.FC<{ setCurrentView: (view: View) => void }> =
                 description="Browse exclusive supplier specials and limited-time offers on dental equipment. Special pricing from leading manufacturers and suppliers."
                 url={`https://medifocal.com${supplierSpecialsUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Promotions', view: { page: 'promotions' } },
-                { label: 'Supplier Specials and Offers' }
-            ]} setCurrentView={setCurrentView} />
             
             <div className="container mx-auto px-4 py-8">
                 <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-xl p-8 mb-8 shadow-lg">
@@ -132,4 +126,6 @@ const SupplierSpecialsPage: React.FC<{ setCurrentView: (view: View) => void }> =
 };
 
 export default SupplierSpecialsPage;
+
+
 

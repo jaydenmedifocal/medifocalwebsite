@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View } from '../App';
 import { getCategories, getAllProducts, searchProducts } from '../services/firestore';
 import { useCart } from '../contexts/CartContext';
+import { useScrollContext } from '../contexts/ScrollContext';
 import AdminLoginModal from './AdminLoginModal';
 
 // Categories will be loaded from Firebase
@@ -60,7 +61,10 @@ const useOnClickOutside = (ref: React.RefObject<HTMLElement>, handler: (event: M
     }, [ref, handler]);
 };
 
-interface TopNavProps { setCurrentView: (view: View) => void; handleSearch: (query: string) => void; }
+interface TopNavProps { 
+  setCurrentView: (view: View) => void; 
+  handleSearch: (query: string) => void;
+}
 
 const TopNav: React.FC<TopNavProps> = ({ setCurrentView, handleSearch }) => {
     const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -78,36 +82,15 @@ const TopNav: React.FC<TopNavProps> = ({ setCurrentView, handleSearch }) => {
     const [categoryNames, setCategoryNames] = useState<string[]>([]);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [categoriesError, setCategoriesError] = useState<string | null>(null);
-    const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const { isHeaderVisible } = useScrollContext();
 
     const searchRef = useRef<HTMLDivElement>(null);
     const navRef = useRef<HTMLElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
     const menuTimerRef = useRef<number | null>(null);
     const focusStyles = "focus:outline-none active:scale-95 transition-transform duration-150";
-
-    // Scroll detection for header show/hide - hide on scroll down, show on scroll up
-    useEffect(() => {
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            
-            // Show header when scrolling up or at the top
-            if (currentScrollY < lastScrollY || currentScrollY < 50) {
-                setIsHeaderVisible(true);
-            } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-                // Hide header when scrolling down past 100px
-                setIsHeaderVisible(false);
-            }
-            
-            setLastScrollY(currentScrollY);
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [lastScrollY]);
 
     // Focus search input when search opens
     useEffect(() => {
@@ -356,7 +339,7 @@ const TopNav: React.FC<TopNavProps> = ({ setCurrentView, handleSearch }) => {
                                             handleMenuEnter(item);
                                         }
                                     }}
-                                    className={`text-sm font-semibold text-gray-900 hover:text-brand-blue transition-colors flex items-center gap-1 ${focusStyles} ${
+                                    className={`text-sm lg:text-base font-semibold text-gray-900 hover:text-brand-blue transition-colors flex items-center gap-1 ${focusStyles} ${
                                         item.isHighlight ? 'text-green-700 hover:text-green-800' : ''
                                     } ${activeMegaMenu === item.megaMenuType || activeDropdown === item.name ? 'text-brand-blue' : ''}`}
                                 >

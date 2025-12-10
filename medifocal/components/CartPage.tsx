@@ -107,8 +107,10 @@ const CartPage: React.FC<CartPageProps> = ({ setCurrentView }) => {
                     <div className="lg:col-span-8">
                         <div className="bg-white rounded-lg shadow-md overflow-hidden">
                             <div className="divide-y divide-gray-200">
-                                {items.map((item) => (
-                                    <div key={item.id} className="p-6 flex flex-col sm:flex-row gap-4">
+                                {items.map((item) => {
+                                    const isAddOn = (item as any).isAddOn || false;
+                                    return (
+                                    <div key={item.id} className={`p-6 flex flex-col sm:flex-row gap-4 ${isAddOn ? 'bg-blue-50/30 border-l-4 border-blue-500' : ''}`}>
                                         {/* Product Image */}
                                         <div className="flex-shrink-0">
                                             <img
@@ -120,9 +122,16 @@ const CartPage: React.FC<CartPageProps> = ({ setCurrentView }) => {
                                         
                                         {/* Product Details */}
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                                                {item.name}
-                                            </h3>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="text-lg font-semibold text-gray-900">
+                                                    {item.name}
+                                                </h3>
+                                                {isAddOn && (
+                                                    <span className="text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                                                        Add-on
+                                                    </span>
+                                                )}
+                                            </div>
                                             {item.manufacturer && (
                                                 <p className="text-sm text-gray-500 mb-2">{item.manufacturer}</p>
                                             )}
@@ -169,7 +178,8 @@ const CartPage: React.FC<CartPageProps> = ({ setCurrentView }) => {
                                             </div>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

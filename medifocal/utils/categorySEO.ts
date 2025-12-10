@@ -405,37 +405,59 @@ export function getProductSEOTitle(productName: string, category?: string, brand
 }
 
 /**
- * Generate product page SEO description
+ * Generate product page SEO description - Enhanced for uniqueness
  */
 export function getProductSEODescription(
   productName: string, 
   category?: string, 
   brand?: string, 
   price?: string,
-  features?: string[]
+  features?: string[],
+  itemNumber?: string
 ): string {
   const parts: string[] = [];
   
+  // Start with product name and brand for uniqueness
   if (brand) {
     parts.push(`${productName} by ${brand}`);
   } else {
     parts.push(productName);
   }
   
+  // Add category context
   if (category) {
-    parts.push(`for ${category.toLowerCase()}`);
+    parts.push(`Premium ${category.toLowerCase()} equipment`);
   }
   
+  // Add specific features if available
   if (features && features.length > 0) {
-    parts.push(`Features: ${features.slice(0, 2).join(', ')}`);
+    const featureText = features.slice(0, 2).join(' and ');
+    parts.push(`Features include ${featureText}`);
   }
   
+  // Add price if available
   if (price) {
-    parts.push(`Price: ${price}`);
+    parts.push(`Available from ${price}`);
   }
   
-  parts.push('Fast shipping Australia-wide. Expert support available.');
+  // Add item number for additional uniqueness
+  if (itemNumber) {
+    parts.push(`Item #${itemNumber}`);
+  }
   
-  return parts.join('. ');
+  // Add location-specific and service details
+  parts.push('Fast shipping Australia-wide. Expert support and installation available.');
+  
+  const description = parts.join('. ');
+  
+  // Ensure description is between 120-160 characters for optimal SEO
+  if (description.length > 160) {
+    return description.substring(0, 157) + '...';
+  }
+  if (description.length < 120) {
+    return description + ' Trusted by Australian dental practices for over 60 years.';
+  }
+  
+  return description;
 }
 

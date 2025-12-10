@@ -3,7 +3,6 @@ import { View } from '../App';
 import { getProductsByCategory, searchProducts } from '../services/firestore';
 import ProductCard from './ProductCard';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface DentalChairsPageProps {
@@ -101,13 +100,6 @@ const DentalChairsPage: React.FC<DentalChairsPageProps> = ({ setCurrentView }) =
         description={pageDescription}
         url={`https://medifocal.com${pageUrl}`}
         keywords="dental chairs, dental chairs Australia, dental treatment units, dental surgery equipment, remote control dental chairs, electric dental chairs, dental chair suppliers Australia, affordable dental chairs, dental equipment Australia"
-      />
-      <Breadcrumbs 
-        items={[
-          { label: 'Home', view: { page: 'home' } },
-          { label: 'Dental Chairs' }
-        ]} 
-        setCurrentView={setCurrentView} 
       />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">

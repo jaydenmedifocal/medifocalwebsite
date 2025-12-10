@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getHandpiecesProducts, getClearanceProducts } from '../services/firestore';
 import ProductCard from './ProductCard';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { View } from '../App';
 import { viewToUrl } from '../utils/routing';
 
@@ -154,17 +153,33 @@ const ClearancePage: React.FC<ClearancePageProps> = ({ setCurrentView }) => {
     const currentProducts = showHandpieces ? handpiecesProducts : clearanceProducts;
 
     const filterOptions = useMemo(() => {
-        const createOptions = (key: keyof Product) => {
+        const createOptions = (key: keyof Product, normalizeCase: boolean = false) => {
             const values = currentProducts.map(p => p[key]).filter(Boolean) as string[];
-            const counts = values.reduce((acc, val) => {
-                acc[val] = (acc[val] || 0) + 1;
-                return acc;
-            }, {} as Record<string, number>);
-            return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
+            
+            if (normalizeCase && key === 'manufacturer') {
+                // Normalize manufacturer names (case-insensitive grouping)
+                const manufacturerMap = new Map<string, { name: string; count: number }>();
+                values.forEach(val => {
+                    const normalized = val.toLowerCase();
+                    const existing = manufacturerMap.get(normalized);
+                    if (existing) {
+                        existing.count += 1;
+                    } else {
+                        manufacturerMap.set(normalized, { name: val, count: 1 });
+                    }
+                });
+                return Array.from(manufacturerMap.values()).sort((a, b) => b.count - a.count);
+            } else {
+                const counts = values.reduce((acc, val) => {
+                    acc[val] = (acc[val] || 0) + 1;
+                    return acc;
+                }, {} as Record<string, number>);
+                return Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
+            }
         };
 
         return {
-            manufacturers: createOptions('manufacturer'),
+            manufacturers: createOptions('manufacturer', true),
             categories: createOptions('category'),
             parentCategories: createOptions('parentCategory'),
             procedures: createOptions('procedure'),
@@ -175,7 +190,8 @@ const ClearancePage: React.FC<ClearancePageProps> = ({ setCurrentView }) => {
         let products = [...currentProducts];
 
         if (activeFilters.manufacturer.length > 0) {
-            products = products.filter(p => activeFilters.manufacturer.includes(p.manufacturer));
+            const normalizedFilters = activeFilters.manufacturer.map(f => f.toLowerCase());
+            products = products.filter(p => p.manufacturer && normalizedFilters.includes(p.manufacturer.toLowerCase()));
         }
         if (activeFilters.category.length > 0) {
             products = products.filter(p => activeFilters.category.includes(p.category));
@@ -219,10 +235,6 @@ const ClearancePage: React.FC<ClearancePageProps> = ({ setCurrentView }) => {
                 description={clearanceDescription}
                 url={`https://medifocal.com${clearanceUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Clearance' }
-            ]} setCurrentView={setCurrentView} />
             <div className="container mx-auto px-4 py-6">
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -311,25 +323,6 @@ const ClearancePage: React.FC<ClearancePageProps> = ({ setCurrentView }) => {
                         </div>
 
                         {/* Controls */}
-                        <div className="bg-white border border-gray-200 p-4 rounded-lg mb-6 flex justify-between items-center shadow-sm">
-                            <span className="text-sm text-gray-600">
-                                Showing <span className="font-bold text-gray-900">{filteredProducts.length}</span> of <span className="font-bold text-gray-900">{currentProducts.length}</span> products
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="sort" className="text-sm font-medium text-gray-700">Sort By:</label>
-                                <select 
-                                    id="sort"
-                                    value={sortOption}
-                                    onChange={(e) => setSortOption(e.target.value)}
-                                    className="border-gray-300 rounded-md text-sm focus:ring-brand-blue focus:border-brand-blue transition-colors"
-                                >
-                                    <option value="relevance">Relevance</option>
-                                    <option value="price-asc">Price: Low to High</option>
-                                    <option value="price-desc">Price: High to Low</option>
-                                    <option value="name-asc">Name: A-Z</option>
-                                </select>
-                            </div>
-                        </div>
 
                         {loading ? (
                             <div className="flex justify-center items-center py-20">

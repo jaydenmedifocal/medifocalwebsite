@@ -4,7 +4,6 @@ import { View } from '../App';
 import { getProductsByParentCategory, getCategoryByName } from '../services/firestore';
 import ProductCard from './ProductCard';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 import { getCategorySEO } from '../utils/categorySEO';
 
@@ -136,7 +135,10 @@ const CategoryLandingPage: React.FC<CategoryLandingPageProps> = ({ categoryName,
 
     const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    const categoryUrl = viewToUrl({ page: 'categoryLanding', categoryName });
+    // Normalize category name to match sitemap format (lowercase, hyphens)
+    // This ensures canonical URL matches sitemap exactly
+    const normalizedCategoryName = categoryName.toLowerCase().replace(/\s+/g, '-');
+    const categoryUrl = `/category/${normalizedCategoryName}`;
     const seoContent = getCategorySEO(categoryName);
 
     return (
@@ -147,15 +149,7 @@ const CategoryLandingPage: React.FC<CategoryLandingPageProps> = ({ categoryName,
                 keywords={seoContent.keywords}
                 url={`https://medifocal.com${categoryUrl}`}
             />
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                
-                <Breadcrumbs 
-                    items={[
-                        { label: 'Home', view: { page: 'home' } },
-                        { label: categoryName }
-                    ]} 
-                    setCurrentView={setCurrentView} 
-                />
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6">
 
                 {/* Hero Section - Enhanced Design */}
                 <header className="bg-gradient-to-br from-brand-blue via-brand-blue-dark to-blue-900 rounded-2xl p-8 md:p-12 mb-12 text-white shadow-2xl relative overflow-hidden">
@@ -209,6 +203,85 @@ const CategoryLandingPage: React.FC<CategoryLandingPageProps> = ({ categoryName,
                             <p className="text-gray-600 mt-2">There are no specific subcategories to display for {categoryName} at the moment.</p>
                         </div>
                     )}
+                </section>
+
+                {/* Browse Related Categories - Grid Layout Similar to Subcategories */}
+                <section className="mb-16">
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Browse Related Categories</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
+                        <a 
+                            href="/category/cameras"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Cameras</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Cameras</p>
+                        </a>
+                        <a 
+                            href="/category/dental-education-models"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Education Models</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Dental Education Models</p>
+                        </a>
+                        <a 
+                            href="/category/diamond-burs"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Diamond Burs</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Diamond Burs</p>
+                        </a>
+                        <a 
+                            href="/category/molar-bands"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Molar Bands</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Molar Bands</p>
+                        </a>
+                        <a 
+                            href="/category/pouches"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Pouches</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Pouches</p>
+                        </a>
+                        <a 
+                            href="/category/restoratives"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Restoratives</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Restoratives</p>
+                        </a>
+                        <a 
+                            href="/category/scaler-tips"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Scaler Tips</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Scaler Tips</p>
+                        </a>
+                        <a 
+                            href="/category/surgical"
+                            className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-xl hover:border-brand-blue transition-all duration-300 transform hover:-translate-y-1 flex flex-col items-center p-4 text-center"
+                        >
+                            <div className="w-full h-24 md:h-32 mb-4 overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
+                                <span className="text-gray-400 text-xs font-semibold">Surgical</span>
+                            </div>
+                            <p className="font-semibold text-gray-800 group-hover:text-brand-blue text-sm">Surgical</p>
+                        </a>
+                    </div>
                 </section>
 
                 {recommendedProducts.length > 0 && (
@@ -300,6 +373,32 @@ const CategoryLandingPage: React.FC<CategoryLandingPageProps> = ({ categoryName,
                         </div>
                     </section>
                 )}
+
+                {/* SEO Content Section - Hidden visually but accessible to crawlers */}
+                <section className="sr-only" aria-label="SEO Content">
+                    <h2>About {categoryName} at Medifocal</h2>
+                    <p>
+                        Medifocal is Australia's premier supplier of {categoryName.toLowerCase()} for dental and medical practices. We offer an extensive range of high-quality products from leading manufacturers, ensuring you have access to the best equipment and supplies for your practice. With over 60 years of experience serving Australian healthcare professionals, we understand the unique needs of dental practices across the country.
+                    </p>
+                    <p>
+                        Our {categoryName.toLowerCase()} collection features products that meet the highest standards of quality, safety, and performance. Whether you're setting up a new practice or upgrading existing equipment, we provide comprehensive solutions tailored to your specific needs. Each product in our catalog undergoes rigorous quality control to ensure it meets Australian regulatory standards and performs reliably in clinical settings.
+                    </p>
+                    <p>
+                        All products in our {categoryName.toLowerCase()} range are carefully selected by our expert team, who understand the unique requirements of Australian dental and medical practices. We work closely with trusted manufacturers to ensure every product meets strict quality and regulatory standards. Our purchasing team maintains relationships with leading global manufacturers to bring you the latest innovations and proven technologies.
+                    </p>
+                    <p>
+                        When you shop for {categoryName.toLowerCase()} at Medifocal, you benefit from competitive pricing, fast shipping across Australia, and exceptional customer service. Our team is always available to provide expert advice and support, helping you make informed decisions for your practice. We offer flexible payment options, comprehensive warranties, and dedicated technical support to ensure your complete satisfaction.
+                    </p>
+                    <p>
+                        We understand that choosing the right {categoryName.toLowerCase()} is crucial for your practice's success. That's why we offer detailed product information, specifications, and customer reviews to help you find exactly what you need. Our commitment to quality and service has made us a trusted partner for healthcare professionals throughout Australia. We take pride in helping practices deliver exceptional patient care through reliable, high-quality equipment.
+                    </p>
+                    <p>
+                        Our {categoryName.toLowerCase()} products are sourced from reputable manufacturers who share our commitment to excellence. We maintain strict quality control processes and work only with suppliers who meet international standards for medical and dental equipment. This ensures that every product you purchase from Medifocal is safe, effective, and built to last in demanding clinical environments.
+                    </p>
+                    <p>
+                        In addition to our comprehensive product range, we provide extensive support services including installation, training, maintenance, and technical assistance. Our experienced team understands the operational challenges of running a dental practice and is committed to providing solutions that enhance your efficiency and patient care capabilities. We're here to support your practice's success every step of the way.
+                    </p>
+                </section>
 
                 {/* Call to Action */}
                 <section className="mb-12 bg-white rounded-2xl shadow-lg p-8 md:p-12 text-center border border-gray-100">

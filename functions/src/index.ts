@@ -2,6 +2,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as nodemailer from 'nodemailer';
 import Stripe from 'stripe';
+import { executeBacklinkStrategies } from './backlinkBuilder';
 
 admin.initializeApp();
 
@@ -55,6 +56,25 @@ export const sendContactEmail = functions.region('australia-southeast1').https.o
   const subject = (data.subject || '').toString().trim();
   const message = (data.message || '').toString().trim();
 
+  // Input length validation to prevent DoS attacks
+  const MAX_NAME_LENGTH = 100;
+  const MAX_EMAIL_LENGTH = 254; // RFC 5321 standard
+  const MAX_SUBJECT_LENGTH = 200;
+  const MAX_MESSAGE_LENGTH = 5000;
+
+  if (name.length > MAX_NAME_LENGTH) {
+    throw new functions.https.HttpsError('invalid-argument', `Name must be less than ${MAX_NAME_LENGTH} characters`);
+  }
+  if (email.length > MAX_EMAIL_LENGTH) {
+    throw new functions.https.HttpsError('invalid-argument', `Email must be less than ${MAX_EMAIL_LENGTH} characters`);
+  }
+  if (subject.length > MAX_SUBJECT_LENGTH) {
+    throw new functions.https.HttpsError('invalid-argument', `Subject must be less than ${MAX_SUBJECT_LENGTH} characters`);
+  }
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    throw new functions.https.HttpsError('invalid-argument', `Message must be less than ${MAX_MESSAGE_LENGTH} characters`);
+  }
+
   console.log('Extracted fields:', { 
     name: name.substring(0, 20), 
     email: email.substring(0, 30), 
@@ -74,8 +94,8 @@ export const sendContactEmail = functions.region('australia-southeast1').https.o
     );
   }
 
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Validate email format with stricter regex
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   if (!emailRegex.test(email)) {
     console.error('Invalid email format:', email);
     throw new functions.https.HttpsError('invalid-argument', 'Invalid email format');
@@ -868,8 +888,56 @@ export const createCheckoutSession = functions.region('australia-southeast1').ht
   try {
     const { cartItems, successUrl, cancelUrl, customerEmail, stripeCustomerId, paymentMethod, customerDetails, shippingAddress } = data;
 
+    // Input validation
     if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
       throw new functions.https.HttpsError('invalid-argument', 'Cart items are required');
+    }
+
+    // Validate cart items array size to prevent DoS
+    if (cartItems.length > 100) {
+      throw new functions.https.HttpsError('invalid-argument', 'Cart cannot contain more than 100 items');
+    }
+
+    // Validate URLs to prevent open redirect attacks
+    const isValidUrl = (url: string): boolean => {
+      try {
+        const parsed = new URL(url);
+        // Only allow same origin or trusted domains
+        return parsed.origin === 'https://medifocal.com' || 
+               parsed.origin === 'https://www.medifocal.com' ||
+               parsed.origin === 'https://medifocal.firebaseapp.com';
+      } catch {
+        return false;
+      }
+    };
+
+    if (successUrl && !isValidUrl(successUrl)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid success URL');
+    }
+
+    if (cancelUrl && !isValidUrl(cancelUrl)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid cancel URL');
+    }
+
+    // Validate email format if provided
+    if (customerEmail) {
+      const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      if (!emailRegex.test(customerEmail) || customerEmail.length > 254) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid email format');
+      }
+    }
+
+    // Validate cart items structure
+    for (const item of cartItems) {
+      if (!item.name || typeof item.name !== 'string' || item.name.length > 500) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid item name');
+      }
+      if (typeof item.price !== 'number' || item.price < 0 || item.price > 1000000) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid item price');
+      }
+      if (item.quantity && (typeof item.quantity !== 'number' || item.quantity < 1 || item.quantity > 1000)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid item quantity');
+      }
     }
 
     // Handle invoice payment - create invoice directly
@@ -2042,34 +2110,6 @@ async function handleTaxIdUpdated(taxId: Stripe.TaxId) {
 }
 
 /**
- * Helper function to add line items to invoice from checkout session
- */
-async function addLineItemsToInvoice(session: Stripe.Checkout.Session, invoice: Stripe.Invoice, customerId: string) {
-  const fullSession = await stripe!.checkout.sessions.retrieve(session.id, {
-    expand: ['line_items'],
-  });
-  
-  if (fullSession.line_items?.data) {
-    for (const lineItem of fullSession.line_items.data) {
-      const price = lineItem.price;
-      if (price) {
-        const amount = price.unit_amount || 0;
-        const quantity = lineItem.quantity || 1;
-        const totalAmount = amount * quantity;
-
-        await stripe!.invoiceItems.create({
-          customer: customerId,
-          invoice: invoice.id,
-          description: lineItem.description || 'Product',
-          amount: totalAmount,
-          currency: price.currency || 'aud',
-        });
-      }
-    }
-  }
-}
-
-/**
  * Handle checkout session completed
  * Creates Firebase Auth account when user completes Stripe Checkout
  * For bank transfer, creates invoice instead of processing payment
@@ -2167,4 +2207,255 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     throw error;
   }
 }
+
+/**
+ * Scheduled function to build backlinks automatically
+ * Runs daily at 2 AM Australia/Sydney time
+ */
+export const buildBacklinksScheduled = functions.region('australia-southeast1')
+  .pubsub.schedule('0 2 * * *') // 2 AM daily (Australia/Sydney timezone)
+  .timeZone('Australia/Sydney')
+  .onRun(async (context) => {
+    console.log('Starting scheduled backlink building...');
+    const db = admin.firestore();
+    
+    try {
+      // Create job record
+      const jobRef = db.collection('backlink_jobs').doc();
+      const jobId = jobRef.id;
+      
+      await jobRef.set({
+        status: 'running',
+        startedAt: admin.firestore.FieldValue.serverTimestamp(),
+        strategies: ['all'],
+        created: 0,
+        errors: [],
+        summary: {},
+      });
+
+      // Execute backlink building
+      const result = await executeBacklinkStrategies(['all']);
+
+      // Update job record with results
+      await jobRef.update({
+        status: 'completed',
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        created: result.created,
+        errors: result.errors,
+        summary: result.summary,
+        success: result.success,
+      });
+
+      console.log(`Backlink building completed: ${result.created} backlinks created`);
+      return null;
+    } catch (error: any) {
+      console.error('Error in scheduled backlink building:', error);
+      
+      // Try to update job status if jobRef exists
+      try {
+        const jobsRef = db.collection('backlink_jobs');
+        const recentJobs = await jobsRef
+          .where('status', '==', 'running')
+          .orderBy('startedAt', 'desc')
+          .limit(1)
+          .get();
+        
+        if (!recentJobs.empty) {
+          await recentJobs.docs[0].ref.update({
+            status: 'failed',
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            error: error.message,
+          });
+        }
+      } catch (updateError) {
+        console.error('Error updating job status:', updateError);
+      }
+      
+      throw error;
+    }
+  });
+
+/**
+ * Manual trigger for backlink building (callable function)
+ * Can be called from admin dashboard
+ */
+export const buildBacklinksManual = functions.region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    // Check if user is admin
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    // Check if user is admin
+    const userDoc = await admin.firestore().collection('customers').doc(context.auth.uid).get();
+    const userData = userDoc.data();
+    const userRole = userData?.role || '';
+    const isAdmin = userRole === 'admin' || 
+      ['admin', 'technician', 'manager', 'supervisor', 'super_admin'].includes(userRole) ||
+      context.auth.token.role === 'admin';
+
+    if (!isAdmin) {
+      throw new functions.https.HttpsError('permission-denied', 'Only admins can trigger backlink building');
+    }
+
+    const db = admin.firestore();
+    const strategies = data?.strategies || ['all'];
+
+    try {
+      // Create job record
+      const jobRef = db.collection('backlink_jobs').doc();
+      const jobId = jobRef.id;
+
+      await jobRef.set({
+        status: 'running',
+        startedAt: admin.firestore.FieldValue.serverTimestamp(),
+        triggeredBy: context.auth.uid,
+        strategies,
+        created: 0,
+        errors: [],
+        summary: {},
+      });
+
+      // Execute backlink building (don't await - run in background)
+      executeBacklinkStrategies(strategies)
+        .then(async (result) => {
+          try {
+            await jobRef.update({
+              status: 'completed',
+              completedAt: admin.firestore.FieldValue.serverTimestamp(),
+              created: result.created || 0,
+              errors: result.errors || [],
+              summary: result.summary || {},
+              success: result.success !== false,
+            });
+            console.log(`Backlink building completed: ${result.created} backlinks created`);
+          } catch (updateError: any) {
+            console.error('Error updating job status:', updateError);
+          }
+        })
+        .catch(async (error: any) => {
+          console.error('Error in backlink building:', error);
+          try {
+            await jobRef.update({
+              status: 'failed',
+              completedAt: admin.firestore.FieldValue.serverTimestamp(),
+              error: error?.message || 'Unknown error',
+            });
+          } catch (updateError: any) {
+            console.error('Error updating failed job status:', updateError);
+          }
+        });
+
+      // Return job ID immediately
+      return {
+        success: true,
+        jobId,
+        message: 'Backlink building started in background',
+      };
+    } catch (error: any) {
+      console.error('Error starting backlink building:', error);
+      throw new functions.https.HttpsError('internal', 'Failed to start backlink building', error.message);
+    }
+  });
+
+/**
+ * Get backlink job status
+ */
+export const getBacklinkJobStatus = functions.region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    try {
+      // Allow unauthenticated access for job status (public read)
+      const db = admin.firestore();
+      const jobId = data?.jobId;
+
+      if (!jobId) {
+        // Get latest job
+        const jobsRef = db.collection('backlink_jobs');
+        const latestJob = await jobsRef
+          .orderBy('startedAt', 'desc')
+          .limit(1)
+          .get();
+
+        if (latestJob.empty) {
+          return { status: 'no_jobs', message: 'No backlink jobs found' };
+        }
+
+        const jobData = latestJob.docs[0].data();
+        return {
+          jobId: latestJob.docs[0].id,
+          ...jobData,
+          startedAt: jobData.startedAt?.toDate?.()?.toISOString() || null,
+          completedAt: jobData.completedAt?.toDate?.()?.toISOString() || null,
+        };
+      }
+
+      // Get specific job
+      const jobDoc = await db.collection('backlink_jobs').doc(jobId).get();
+      if (!jobDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Job not found');
+      }
+
+      const jobData = jobDoc.data();
+      return {
+        jobId: jobDoc.id,
+        ...jobData,
+        startedAt: jobData?.startedAt?.toDate?.()?.toISOString() || null,
+        completedAt: jobData?.completedAt?.toDate?.()?.toISOString() || null,
+      };
+    } catch (error: any) {
+      console.error('Error in getBacklinkJobStatus:', error);
+      throw new functions.https.HttpsError('internal', 'Failed to get job status', error.message);
+    }
+  });
+
+/**
+ * Check user login type (for admin login modal)
+ */
+export const checkUserLoginType = functions.region('australia-southeast1')
+  .https.onCall(async (data, context) => {
+    try {
+      const email = data?.email;
+      
+      if (!email || typeof email !== 'string') {
+        throw new functions.https.HttpsError('invalid-argument', 'Email is required');
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid email format');
+      }
+
+      // Check if user exists in Firestore customers collection
+      const db = admin.firestore();
+      const customersSnapshot = await db.collection('customers')
+        .where('email', '==', email.toLowerCase().trim())
+        .limit(1)
+        .get();
+
+      if (customersSnapshot.empty) {
+        return { exists: false, loginType: 'standard' };
+      }
+
+      const userData = customersSnapshot.docs[0].data();
+      const role = userData?.role || 'customer';
+      
+      // Determine login type
+      const isFieldServiceUser = ['admin', 'technician', 'manager', 'supervisor', 'super_admin'].includes(role);
+      
+      return {
+        exists: true,
+        loginType: isFieldServiceUser ? 'field_service' : 'standard',
+        role: role,
+      };
+    } catch (error: any) {
+      console.error('Error in checkUserLoginType:', error);
+      // Return non-blocking error (don't throw)
+      return {
+        exists: false,
+        loginType: 'standard',
+        error: error.message,
+      };
+    }
+  });
 

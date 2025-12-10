@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View } from '../App';
 import { getAllProducts } from '../services/firestore';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import { viewToUrl } from '../utils/routing';
 
 interface BrandsPageProps {
@@ -58,13 +57,6 @@ const BrandsPage: React.FC<BrandsPageProps> = ({ setCurrentView }) => {
         description={pageDescription}
         keywords="dental brands, dental manufacturers, 3M dental, Kerr dental, GC dental, VOCO dental, Ultradent, dental product brands Australia"
         url={`https://medifocal.com${pageUrl}`}
-      />
-      <Breadcrumbs 
-        items={[
-          { label: 'Home', view: { page: 'home' } },
-          { label: 'Brands' }
-        ]} 
-        setCurrentView={setCurrentView} 
       />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
@@ -237,4 +229,6 @@ const BrandsPage: React.FC<BrandsPageProps> = ({ setCurrentView }) => {
 };
 
 export default BrandsPage;
+
+
 

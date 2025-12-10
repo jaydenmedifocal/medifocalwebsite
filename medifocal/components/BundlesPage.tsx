@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View } from '../App';
 import SEOHead from './SEOHead';
-import Breadcrumbs from './Breadcrumbs';
 import ProductCard from './ProductCard';
 import { viewToUrl } from '../utils/routing';
 import { getAllProducts } from '../services/firestore';
@@ -72,11 +71,6 @@ const BundlesPage: React.FC<{ setCurrentView: (view: View) => void }> = ({ setCu
                 description="Shop complete dental equipment bundles and packages. Save money with bundled deals on autoclaves, dental chairs, imaging equipment, and more."
                 url={`https://medifocal.com${bundlesUrl}`}
             />
-            <Breadcrumbs items={[
-                { label: 'Home', view: { page: 'home' } },
-                { label: 'Promotions', view: { page: 'promotions' } },
-                { label: 'Bundles' }
-            ]} setCurrentView={setCurrentView} />
             
             <div className="container mx-auto px-4 py-8">
                 <div className="bg-gradient-to-r from-green-600 to-green-800 text-white rounded-xl p-8 mb-8 shadow-lg">
@@ -131,4 +125,6 @@ const BundlesPage: React.FC<{ setCurrentView: (view: View) => void }> = ({ setCu
 };
 
 export default BundlesPage;
+
+
 

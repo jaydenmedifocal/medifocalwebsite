@@ -1,6 +1,7 @@
 {
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
   "storage": {
     "rules": "storage.rules"
@@ -36,6 +37,10 @@
         "destination": "/robots.txt"
       },
       {
+        "source": "/llms.txt",
+        "destination": "/llms.txt"
+      },
+      {
         "source": "/field-service/**",
         "destination": "/field-service/index.html"
       },
@@ -64,6 +69,10 @@
           {
             "key": "Cache-Control",
             "value": "public, max-age=31536000, immutable"
+          },
+          {
+            "key": "Content-Encoding",
+            "value": "gzip"
           },
           {
             "key": "Content-Type",
@@ -104,6 +113,19 @@
       },
       {
         "source": "/robots.txt",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "text/plain"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600"
+          }
+        ]
+      },
+      {
+        "source": "/llms.txt",
         "headers": [
           {
             "key": "Content-Type",
@@ -184,7 +206,11 @@
           },
           {
             "key": "X-Frame-Options",
-            "value": "SAMEORIGIN"
+            "value": "DENY"
+          },
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.gstatic.com https://aistudiocdn.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob: https://images.unsplash.com; connect-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://*.stripe.com https://js.stripe.com https://api.stripe.com https://billing.stripe.com https://www.google-analytics.com https://www.googletagmanager.com https://images.unsplash.com https://*.cloudfunctions.net; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
           },
           {
             "key": "X-XSS-Protection",
@@ -227,6 +253,56 @@
       {
         "source": "/index.html",
         "destination": "/",
+        "type": 301
+      },
+      {
+        "source": "/collections/cameras",
+        "destination": "/category/cameras",
+        "type": 301
+      },
+      {
+        "source": "/collections/dental-education-models",
+        "destination": "/category/dental-education-models",
+        "type": 301
+      },
+      {
+        "source": "/collections/diamond-burs",
+        "destination": "/category/diamond-burs",
+        "type": 301
+      },
+      {
+        "source": "/collections/molar-bands",
+        "destination": "/category/molar-bands",
+        "type": 301
+      },
+      {
+        "source": "/collections/pouches",
+        "destination": "/category/pouches",
+        "type": 301
+      },
+      {
+        "source": "/collections/restoratives",
+        "destination": "/category/restoratives",
+        "type": 301
+      },
+      {
+        "source": "/collections/scaler-tips",
+        "destination": "/category/scaler-tips",
+        "type": 301
+      },
+      {
+        "source": "/collections/surgical",
+        "destination": "/category/surgical",
+        "type": 301
+      },
+      {
+        "source": "www.medifocal.com/**",
+        "destination": "https://medifocal.com/:splat",
+        "type": 301
+      },
+      {
+        "source": "www.medifocal.com",
+        "destination": "https://medifocal.com",
         "type": 301
       }
     ],

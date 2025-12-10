@@ -129,6 +129,34 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
   const schemaData = structuredData || generateStructuredData();
 
+  // Update canonical link in head (replace existing one from index.html)
+  useEffect(() => {
+    // Find existing canonical link or create new one
+    let canonicalLink = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', fullUrl);
+  }, [fullUrl]);
+
+  // Update title
+  useEffect(() => {
+    document.title = fullTitle;
+  }, [fullTitle]);
+
+  // Update meta description
+  useEffect(() => {
+    let metaDesc = document.querySelector('meta[name="description"]') as HTMLMetaElement;
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', description);
+  }, [description]);
+
   // Validate SEO in development
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -151,15 +179,14 @@ const SEOHead: React.FC<SEOHeadProps> = ({
 
   return (
     <>
-      {/* Primary Meta Tags */}
-      <title>{fullTitle}</title>
+      {/* Primary Meta Tags - These update the DOM via useEffect above */}
       <meta name="title" content={fullTitle} />
-      <meta name="description" content={description} />
+      {/* Description updated via useEffect */}
       {/* Keywords meta tag removed - considered spam indicator by search engines */}
       <meta name="author" content="Medifocal" />
       <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
       <meta name="googlebot" content="index, follow" />
-      <link rel="canonical" href={fullUrl} />
+      {/* Canonical updated via useEffect - don't add duplicate */}
       
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />

@@ -250,6 +250,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ setCurrentView }) => {
         { id: 'crm', label: 'CRM Integration', path: '/admin/crm', requiredRoles: ['admin', 'manager'] },
         { id: 'projects', label: 'Projects', path: '/admin/projects', requiredRoles: ['admin', 'manager'] },
         { id: 'reports', label: 'Reports', path: '/admin/reports', icon: BarChartIcon, requiredRoles: ['admin', 'manager'] },
+        { id: 'backlinks', label: 'Backlink Management', path: '/admin/backlinks', icon: BarChartIcon, requiredRoles: ['admin'] },
         { id: 'aliexpress', label: 'AliExpress Products', path: '/admin/aliexpress', icon: PackageIcon, requiredRoles: ['admin'] },
         { id: 'aliexpress-orders', label: 'AliExpress Orders', path: '/admin/aliexpress/orders', icon: OrdersIcon, requiredRoles: ['admin'] },
       ]

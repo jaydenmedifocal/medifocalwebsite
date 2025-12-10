@@ -49,10 +49,16 @@ const HomeCategoryTiles: React.FC<HomeCategoryTilesProps> = ({ setCurrentView })
                     onClick={() => setCurrentView({ page: 'dentalChairs' })}
                 />
                 <Tile 
-                    title="Anaesthetics"
-                    desc="Wide range of local and topical anaesthetics for patient comfort."
-                    img="https://images.unsplash.com/photo-1628771065518-0d82f1938462?q=80&w=400&auto=format&fit=crop" 
-                    onClick={() => setCurrentView({ page: 'categoryLanding', categoryName: 'Anaesthetic' })}
+                    title="Cameras"
+                    desc="Dental cameras and imaging equipment for accurate diagnosis and documentation."
+                    img="https://images.unsplash.com/photo-1530026405186-ed1f139313f8?q=80&w=400&auto=format&fit=crop" 
+                    onClick={() => setCurrentView({ page: 'categoryLanding', categoryName: 'Cameras' })}
+                />
+                <Tile 
+                    title="Surgical Instruments"
+                    desc="High-quality surgical instruments for dental procedures and treatments."
+                    img="https://images.unsplash.com/photo-1579154204601-01588f351e67?q=80&w=400&auto=format&fit=crop" 
+                    onClick={() => setCurrentView({ page: 'categoryLanding', categoryName: 'Surgical' })}
                 />
                 <Tile 
                     title="Dental Equipment"
@@ -60,13 +66,18 @@ const HomeCategoryTiles: React.FC<HomeCategoryTilesProps> = ({ setCurrentView })
                     img="https://images.unsplash.com/photo-1551601651-2a8555f1a136?q=80&w=400&auto=format&fit=crop" 
                     onClick={() => setCurrentView({ page: 'categoryLanding', categoryName: 'Equipment' })}
                 />
-                <Tile 
-                    title="Medifocal Brand"
-                    desc="High-quality products at a competitive price, just for you."
-                    img="https://images.unsplash.com/photo-1599045118108-bf9954418b76?q=80&w=400&auto=format&fit=crop" 
-                    onClick={() => setCurrentView({ page: 'productList', categoryName: 'Gloves', parentCategory: 'Infection Control' })} 
-                />
             </div>
+            {/* Additional category links for better internal linking - hidden but crawlable */}
+            <nav className="sr-only mt-8" aria-label="All Categories">
+                <a href="/category/cameras">Cameras</a>
+                <a href="/category/dental-education-models">Dental Education Models</a>
+                <a href="/category/diamond-burs">Diamond Burs</a>
+                <a href="/category/molar-bands">Molar Bands</a>
+                <a href="/category/pouches">Pouches</a>
+                <a href="/category/restoratives">Restoratives</a>
+                <a href="/category/scaler-tips">Scaler Tips</a>
+                <a href="/category/surgical">Surgical</a>
+            </nav>
         </section>
     );
 };
